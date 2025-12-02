@@ -1,9 +1,9 @@
 import streamlit as st
 
 st.set_page_config(page_title="Paliopoly", layout="centered")
-st.title("Paliopoly – Chilled dude Edition")
+st.title("Paliopoly – Chilled Dude Original Edition")
 
-# ====================== BOARD (unique rail names) ======================
+# ====================== BOARD ======================
 BOARD = [
     ("GO", "go"), ("Kilima 1", "prop", 80, 6, 18), ("Renown Tax", "tax", 100), ("Kilima 2", "prop", 80, 6, 18),
     ("Travel Point 1", "rail", 150, 40), ("Chappa Chest", "chest"), ("Jail", "jail"),
@@ -29,10 +29,11 @@ CHANCE_CARDS = {2:"Free Parking → move there",3:"Get Out of Jail Free!",4:"Giv
 # ====================== INITIALISE ======================
 if 'players' not in st.session_state:
     st.subheader("Welcome to Paliopoly!")
-    names = st.text_input("Names (comma separated)", "Chilled dude")
+    names = st.text_input("Names (comma separated)", "Chilled Dude, TJediTim, lilshrtchit.ttv")
     if st.button("Start Game"):
         pl = [n.strip() for n in names.split(",") if n.strip()]
-        if len(pl) < 2: st.error("Need 2+ players")
+        if len(pl) < 2:
+            st.error("Need 2+ players")
         else:
             st.session_state.players = pl
             st.session_state.cash = {p:1200 for p in pl}
@@ -66,30 +67,27 @@ else:
         st.error(f"{cur} is in Jail! (turn {jail_turns[cur]+1}/3)")
 
         c1, c2, c3 = st.columns(3)
-        # Use card
         if c1.button("Use Get Out of Jail Free") and jailfree[cur] > 0:
             jailfree[cur] -= 1
             jail[cur] = False
             jail_turns[cur] = 0
             st.success("Out with card!")
 
-        # Pay 100g
         if c2.button("Pay 100g") and cash[cur] >= 100:
             cash[cur] -= 100
             jail[cur] = False
             jail_turns[cur] = 0
             st.success("Paid 100g → free!")
 
-        # Roll doubles
         dr = c3.text_input("Roll for doubles (e.g. 4 4)", key="jaildice")
-        if dr.count(" ") == 1:
+        if dr and dr.count(" ") == 1:
             try:
                 d1, d2 = map(int, dr.split())
                 if 1 <= d1 <= 6 and 1 <= d2 <= 6:
                     if d1 == d2:
                         jail[cur] = False
                         jail_turns[cur] = 0
-                        st.success(f"DOUBLES {d1}! You're out!")
+                        st.success(f"DOUBLES {d1}! Out of jail!")
                         pos[cur] = (6 + d1 + d2) % 24
                     else:
                         jail_turns[cur] += 1
@@ -99,7 +97,8 @@ else:
                                 cash[cur] -= 100
                                 jail[cur] = False
                                 st.info("3 turns up — paid 100g and released")
-            except: pass
+            except:
+                pass
 
     # ====================== NORMAL TURN ======================
     else:
@@ -136,73 +135,84 @@ else:
                     jail_turns[cur] = 0
                     st.error("Go to Jail!")
 
-                # CHEST & CHANCE — FULLY AUTO
+                # CHEST
                 elif typ == "chest":
                     txt = CHEST_CARDS[roll]
                     st.success(f"CHAPPA CHEST → {txt}")
-                    if roll==2: pos[cur]=0; cash[cur]+=300
-                    elif roll==3: pos[cur]=6; jail[cur]=True; jail_turns[cur]=0
-                    elif roll==4: for pl in p: if pl!=cur: cash[pl]-=50; cash[cur]+=50
-                    elif roll==5: cash[cur]-=100
-                    elif roll==6: cash[cur]+=100
-                    elif roll==7: pos[cur]=(pos[cur]-3)%24
-                    elif roll==8: pos[cur]=(pos[cur]+3)%24
-                    elif roll==9:
+                    if roll == 2: pos[cur] = 0; cash[cur] += 300
+                    elif roll == 3: pos[cur] = 6; jail[cur] = True; jail_turns[cur] = 0
+                    elif roll == 4:
+                        for pl in p:
+                            if pl != cur:
+                                cash[pl] -= 50
+                                cash[cur] += 50
+                    elif roll == 5: cash[cur] -= 100
+                    elif roll == 6: cash[cur] += 100
+                    elif roll == 7: pos[cur] = (pos[cur] - 3) % 24
+                    elif roll == 8: pos[cur] = (pos[cur] + 3) % 24
+                    elif roll == 9:
                         poorest = min(p, key=cash.get)
-                        cash[cur]-=100; cash[poorest]+=100
-                    elif roll==10:
-                        for i in range(new+1,new+25):
-                            if BOARD[i%24][1]=="rail":
-                                pos[cur]=i%24; break
-                    elif roll==11: cash[cur]-=150
-                    elif roll==12: cash[cur]+=200
+                        cash[cur] -= 100; cash[poorest] += 100
+                    elif roll == 10:
+                        for i in range(new + 1, new + 25):
+                            if BOARD[i % 24][1] == "rail":
+                                pos[cur] = i % 24; break
+                    elif roll == 11: cash[cur] -= 150
+                    elif roll == 12: cash[cur] += 200
 
+                # CHANCE
                 elif typ == "chance":
                     txt = CHANCE_CARDS[roll]
                     st.success(f"CHAPAA CHANCE → {txt}")
-                    if roll==2: pos[cur]=12
-                    elif roll==3: jailfree[cur]+=1
-                    elif roll==4: for pl in p: if pl!=cur: cash[cur]-=50; cash[pl]+=50
-                    elif roll==5: cash[cur]-=200
-                    elif roll==6: cash[cur]+=150
-                    elif roll==7:
-                        for i in range(new+1,new+25):
-                            if BOARD[i%24][1]=="util":
-                                pos[cur]=i%24; break
-                    elif roll==8:
-                        for i in range(new+1,new+25):
-                            if BOARD[i%24][1]=="prop":
-                                pos[cur]=i%24; break
-                    elif roll==9: for pl in p: if pl!=cur: cash[pl]-=100; cash[cur]+=100
-                    elif roll==10:
-                        for i in range(new+1,new+25):
-                            idx=i%24
-                            if owner[idx] and owner[idx]!=cur:
-                                pos[cur]=idx; break
-                    elif roll==11: cash[cur]-=100
-                    elif roll==12: cash[cur]+=200
+                    if roll == 2: pos[cur] = 12
+                    elif roll == 3: jailfree[cur] += 1
+                    elif roll == 4:
+                        for pl in p:
+                            if pl != cur:
+                                cash[cur] -= 50; cash[pl] += 50
+                    elif roll == 5: cash[cur] -= 200
+                    elif roll == 6: cash[cur] += 150
+                    elif roll == 7:
+                        for i in range(new + 1, new + 25):
+                            if BOARD[i % 24][1] == "util":
+                                pos[cur] = i % 24; break
+                    elif roll == 8:
+                        for i in range(new + 1, new + 25):
+                            if BOARD[i % 24][1] == "prop":
+                                pos[cur] = i % 24; break
+                    elif roll == 9:
+                        for pl in p:
+                            if pl != cur:
+                                cash[pl] -= 100; cash[cur] += 100
+                    elif roll == 10:
+                        for i in range(new + 1, new + 25):
+                            idx = i % 24
+                            if owner[idx] and owner[idx] != cur:
+                                pos[cur] = idx; break
+                    elif roll == 11: cash[cur] -= 100
+                    elif roll == 12: cash[cur] += 200
 
                 # AUTO RENT
-                if typ in ("prop","rail","util") and owner[new] and owner[new]!=cur:
+                if typ in ("prop","rail","util") and owner[new] and owner[new] != cur:
                     landlord = owner[new]
-                    if typ=="prop":
+                    if typ == "prop":
                         set_name = next(k for k,v in SETS.items() if name in v)
-                        full = all(owner[BOARD.index(s)]==landlord for s in SETS[set_name])
+                        full = all(owner[BOARD.index(s)] == landlord for s in SETS[set_name])
                         rent = BOARD[new][4] if full else BOARD[new][3]
                         reason = f"full {set_name} set" if full else name
-                    elif typ=="rail":
-                        owned = sum(1 for i in range(24) if BOARD[i][1]=="rail" and owner[i]==landlord)
+                    elif typ == "rail":
+                        owned = sum(1 for i in range(24) if BOARD[i][1] == "rail" and owner[i] == landlord)
                         rent = owned * 40
                         reason = f"{owned} Travel Points"
                     else:
-                        owned = sum(1 for i in range(24) if BOARD[i][1]=="util" and owner[i]==landlord)
-                        rent = roll * (10 if owned==2 else 4)
-                        reason = f"Utility ×{10 if owned==2 else 4}"
+                        owned = sum(1 for i in range(24) if BOARD[i][1] == "util" and owner[i] == landlord)
+                        rent = roll * (10 if owned == 2 else 4)
+                        reason = f"Utility ×{10 if owned == 2 else 4}"
                     cash[cur] -= rent
                     cash[landlord] += rent
                     st.warning(f"Paid {landlord} {rent}g for {reason}")
 
-                # BUY BUTTON — BACK AND WORKING
+                # BUY BUTTON
                 if typ in ("prop","rail","util") and owner[new] is None:
                     price = BOARD[new][2]
                     if st.button(f"BUY {name} – {price}g"):
@@ -217,24 +227,24 @@ else:
 
     st.markdown(f"**Current square:** {BOARD[pos[cur]][0]}")
 
-    # ==================== FULL TRADE ====================
+    # ==================== TRADE ====================
     with st.expander("Trade – Cash & Properties"):
         giver = st.selectbox("Giver", p)
-        receiver = st.selectbox("Receiver", [x for x in p if x!=giver])
+        receiver = st.selectbox("Receiver", [x for x in p if x != giver])
         amount = st.number_input("Cash amount (0=none)", min_value=0, value=0, step=10)
-        owned = [BOARD[i][0] for i in range(24) if owner[i]==giver]
+        owned = [BOARD[i][0] for i in range(24) if owner[i] == giver]
         prop = st.selectbox("Property (optional)", ["(none)"] + owned)
         if st.button("Execute Deal"):
-            if amount==0 and prop=="(none)":
+            if amount == 0 and prop == "(none)":
                 st.warning("Nothing to trade")
-            elif amount>0 and cash[giver]<amount:
+            elif amount > 0 and cash[giver] < amount:
                 st.error("Not enough cash")
             else:
-                if amount>0:
+                if amount > 0:
                     cash[giver] -= amount
                     cash[receiver] += amount
-                if prop!="(none)":
-                    idx = next(i for i,s in enumerate(BOARD) if s[0]==prop)
+                if prop != "(none)":
+                    idx = next(i for i,s in enumerate(BOARD) if s[0] == prop)
                     owner[idx] = receiver
                 st.success("Deal done!")
 
@@ -246,7 +256,7 @@ else:
     # Player summary
     st.markdown("### Players")
     for pl in p:
-        props = [BOARD[i][0] for i in range(24) if owner.get(i)==pl]
+        props = [BOARD[i][0] for i in range(24) if owner.get(i) == pl]
         st.write(f"**{pl}** – {cash[pl]}g – {'JAILED' if jail[pl] else 'Free'} – Free cards:{jailfree[pl]} – {', '.join(props) or 'nothing'}")
 
     if st.button("New Game – Reset"):
