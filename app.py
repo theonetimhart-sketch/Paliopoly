@@ -233,4 +233,3 @@ if st.button("New Game – Reset Everything"):
     for k in list(st.session_state.keys()):
         del st.session_state[k]
     st.rerun()
-         
