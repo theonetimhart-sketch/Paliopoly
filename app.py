@@ -32,7 +32,7 @@ CHANCE = {2:"Free Parking move there",3:"Get Out of Jail Free!",4:"Give 50g to e
           6:"Get 150g",7:"Move to next Utility",8:"Move to next main property",9:"All give you 100g",
           10:"Go to nearest owned property",11:"Pay 100g",12:"Get 200g"}
 
-# ====================== INITIALISE ======================
+# ====================== INITIALISE (FIXED FOREVER) ======================
 if 'players' not in st.session_state:
     st.subheader("Welcome to Paliopoly!")
     names = st.text_input("Names (comma separated)", "Chilled Dude, TJediTim, lilshrtchit.ttv")
@@ -41,20 +41,20 @@ if 'players' not in st.session_state:
         if len(pl) < 2:
             st.error("Need 2+ players")
         else:
+            # Initialize ALL state here
             st.session_state.players = pl
-            st.session_state.cash = {p:1200 for p in pl}
-            st.session_state.pos = {p:0 for p in pl}
-            st.session_state.owner = {i:None for i in range(24)}
-            st.session_state.jail = {p:False for p in pl}
-            st.session_state.jail_turns = {p:0 for p in pl}
+            st.session_state.cash = {player: 1200 for player in pl}
+            st.session_state.pos = {player: 0 for player in pl}
+            st.session_state.owner = {i: None for i in range(24)}
+            st.session_state.jail = {player: False for player in pl}
+            st.session_state.jail_turns = {player: 0 for player in pl}
             st.session_state.jailfree_owner = None
             st.session_state.current = 0
             st.session_state.doubles_count = 0
             st.session_state.can_roll = True
-            st.session_state.last_action = ""
             st.rerun()
 
-# ====================== GAME STATE ======================
+# Now safe — everything is initialized
 p = st.session_state.players
 cash = st.session_state.cash
 pos = st.session_state.pos
@@ -69,19 +69,19 @@ col1, col2, col3 = st.columns(3)
 with col1: st.markdown(f"**Turn → {cur}** {'(JAILED {jail_turns[cur]+1}/3)' if jail[cur] else ''}")
 with col2: st.markdown(f"**Cash:** {cash[cur]}g")
 with col3: st.button("Next player", on_click=lambda: st.session_state.update(
-    current=(st.session_state.current+1)%len(p), doubles_count=0, can_roll=True, last_action="next"))
+    current=(st.session_state.current+1)%len(p), doubles_count=0, can_roll=True))
 
 # ====================== IN JAIL ======================
 if jail[cur]:
-    st.error(f"{cur} is in Jail!")
+    st.error(f"{cur} is in Jail! (turn {jail_turns[cur]+1}/3)")
     j1, j2, j3, j4 = st.columns(4)
     if j1.button("Pay 100g", key="pay_jail") and cash[cur] >= 100:
-        cash[cur] -= 100; jail[cur] = False; jail_turns[cur] = 0; st.success("Paid 100g → free!"); st.rerun()
+        cash[cur] -= 100; jail[cur] = False; jail_turns[cur] = 0; st.success("Paid → free!"); st.rerun()
     if j2.button("Use Jail Free", key="use_card") and jailfree_owner == cur:
-        st.session_state.jailfree_owner = None; jail[cur] = False; jail_turns[cur] = 0; st.success("Used card → free!"); st.rerun()
-    if j3.button("Rolled Doubles YES", key="doubles_out"):
+        st.session_state.jailfree_owner = None; jail[cur] = False; jail_turns[cur] = 0; st.success("Used card!"); st.rerun()
+    if j3.button("Rolled Doubles YES", key="doubles_yes"):
         jail[cur] = False; jail_turns[cur] = 0; st.success("DOUBLES! Out!"); st.rerun()
-    if j4.button("No Doubles", key="no_dubs"):
+    if j4.button("No Doubles", key="no_doubles"):
         jail_turns[cur] += 1
         if jail_turns[cur] >= 3 and cash[cur] >= 100:
             cash[cur] -= 100; jail[cur] = False; st.info("3 turns → paid 100g")
@@ -89,10 +89,9 @@ if jail[cur]:
 
 # ====================== NORMAL TURN ======================
 elif st.session_state.can_roll:
-    roll_input = st.text_input("Enter total dice rolled here (2–12)", value="", key="dice_input")
-    
-    if roll_input.isdigit():
-        roll = int(roll_input)
+    total = st.text_input("Enter total dice rolled here (2–12)", value="", key="dice_input")
+    if total.isdigit():
+        roll = int(total)
         if 2 <= roll <= 12:
             is_doubles = st.checkbox("Was this doubles?", key=f"doubles_{roll}")
 
@@ -119,12 +118,10 @@ elif st.session_state.can_roll:
                 cash[cur] += 300
                 st.balloons()
 
-            # Taxes
+            # Taxes / Go to Jail
             if typ == "tax":
                 cash[cur] -= BOARD[new_pos][2]
                 st.info(f"Tax paid: {BOARD[new_pos][2]}g")
-
-            # Go to Jail
             elif typ == "go2jail":
                 pos[cur] = 6; jail[cur] = True; jail_turns[cur] = 0
                 st.session_state.doubles_count = 0
@@ -142,7 +139,6 @@ elif st.session_state.can_roll:
                 st.success(f"CHAPAA CHANCE → {txt}")
                 if roll == 3 and jailfree_owner is None:
                     st.session_state.jailfree_owner = cur
-                    st.success("Got Get Out of Jail Free!")
                 st.session_state.can_roll = False
 
             # AUTO RENT
@@ -160,6 +156,7 @@ elif st.session_state.can_roll:
                 cash[cur] -= rent
                 cash[landlord] += rent
                 st.warning(f"Paid {landlord} {rent}g rent!")
+                st.rerun()
 
             # BUY BUTTON — ONLY IF UNOWNED
             if typ in ("prop","rail","util") and owner[new_pos] is None:
@@ -173,13 +170,11 @@ elif st.session_state.can_roll:
                     else:
                         st.error("Not enough gold!")
 
-            # Show landing
             st.success(f"Landed on **{name}**")
 
             # DOUBLES = ANOTHER TURN
             if is_doubles and st.session_state.doubles_count < 3 and typ not in ("chest","chance"):
                 st.info("DOUBLES! Roll again!")
-                st.session_state.last_action = "doubles"
             else:
                 st.session_state.can_roll = False
                 st.info("Turn over")
@@ -196,8 +191,8 @@ with st.expander("Trades"):
     giver = st.selectbox("Giver", p, index=p.index(cur))
     receiver = st.selectbox("Receiver", [x for x in p if x != giver])
     amount = st.number_input("Cash (0=none)", min_value=0, value=0, step=10)
-    owned_props = [BOARD[i][0] for i in range(24) if owner[i] == giver]
-    prop = st.selectbox("Property (optional)", ["(none)"] + owned_props)
+    owned = [BOARD[i][0] for i in range(24) if owner[i] == giver]
+    prop = st.selectbox("Property (optional)", ["(none)"] + owned)
     jailfree_option = "Get Out of Jail Free Card" if jailfree_owner == giver else "(none)"
     jailfree_trade = st.selectbox("Jail Free Card", ["(none)", jailfree_option])
 
@@ -234,7 +229,8 @@ for pl in p:
     else:
         st.write("→ no properties")
 
-if st.button("New Game – Reset All"):
+if st.button("New Game – Reset Everything"):
     for k in list(st.session_state.keys()):
         del st.session_state[k]
     st.rerun()
+         
