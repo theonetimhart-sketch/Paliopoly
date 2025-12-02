@@ -54,7 +54,7 @@ CHANCE_CARDS = {
     7: ("Follow a flutterfox to the next shrub", lambda cur,pos,cash,pot: pos.update({cur: next((i for i in [13,15,22,24] if i>pos[cur]),13)})),
     8: ("Ormuu pushes you to next main property", lambda cur,pos,cash,pot: pos.update({cur: next((i for i in [1,3,7,10,13,15,22,24] if i>pos[cur]),1)})),
     9: ("Badruu gives you new fruit, everyone gives you 100g for the seeds", lambda cur,pos,cash,pot: [cash.update({p: cash[p]-100}) or cash.update({cur: cash[cur]+100}) for p in st.session_state.players if p != cur]),
-    10: ("Go and help the trufflet at the nearest owned property", lambda cur,pos,cash,pot: pos.update({cur: min((i for i,o in st.session_state.properties.items() if o and BOARD[i][1] in (\"prop\",\"rail\",\"util\")), key=lambda x:(x-pos[cur])%len(BOARD))})),
+    10: ("Go and help the trufflet at the nearest owned property", lambda cur,pos,cash,pot: pos.update({cur: min([i for i,o in st.session_state.properties.items() if o and BOARD[i][1] in ("prop","rail","util")], key=lambda x:(x-pos[cur])%len(BOARD))})),
     11: ("you lost the Gardners runestone, Pay 100g so Einar and Hekla can help make a new one", lambda cur,pos,cash,pot: cash.update({cur: cash[cur]-100})),
     12: ("Reth just started selling beanburgers and flowtato fries, for giving him the idea to star fast food he pays you 200g", lambda cur,pos,cash,pot: cash.update({cur: cash[cur]+200}))
 }
