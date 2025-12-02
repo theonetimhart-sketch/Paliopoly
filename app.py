@@ -31,7 +31,7 @@ BOARD = [
 ]
 
 # ======================
-# CARD FLAVOUR TEXT (editable)
+# CHEST & CHANCE CARDS (Editable Flavour)
 # ======================
 CHEST_CARDS = {
     2: ("Advance to GO!", lambda cur, pos, cash, pot: (pos.update({cur:0}), cash.update({cur: cash[cur]+300}))),
@@ -48,13 +48,13 @@ CHEST_CARDS = {
 }
 
 CHANCE_CARDS = {
-    2: ("Free Parking! Collect pot", lambda cur, pos, cash, pot: (pos.update({cur:12}), cash.update({cur: cash[cur]+pot}), st.session_state.__setitem__('free_parking_pot', 0))),
+    2: ("Free Parking! Collect pot", lambda cur, pos, cash, pot: (pos.update({cur:12}), cash.update({cur: cash[cur]+st.session_state.free_parking_pot}), st.session_state.__setitem__('free_parking_pot', 0))),
     3: ("Get Out of Jail Free!", lambda cur, pos, cash, pot: st.session_state.__setitem__('jail_free_card', cur)),
     4: ("Give 50g to everyone", lambda cur, pos, cash, pot: [cash.update({cur: cash[cur]-50}) or cash.update({p: cash[p]+50}) for p in st.session_state.players if p != cur]),
     5: ("Pay 200g", lambda cur, pos, cash, pot: cash.update({cur: cash[cur]-200})),
     6: ("Collect 150g", lambda cur, pos, cash, pot: cash.update({cur: cash[cur]+150})),
-    7: ("Move to next shrub", lambda cur, pos, cash, pot: pos.update({cur: next((i for i in [13,15,22,24] if i>pos[cur]),13))}),
-    8: ("Move to next main property", lambda cur, pos, cash, pot: pos.update({cur: next((i for i in [1,3,7,10,13,15,22,24] if i>pos[cur]),1))}),
+    7: ("Move to next shrub", lambda cur, pos, cash, pot: pos.update({cur: next((i for i in [13,15,22,24] if i>pos[cur]),13)})),
+    8: ("Move to next main property", lambda cur, pos, cash, pot: pos.update({cur: next((i for i in [1,3,7,10,13,15,22,24] if i>pos[cur]),1)})),
     9: ("Everyone gives you 100g", lambda cur, pos, cash, pot: [cash.update({p: cash[p]-100}) or cash.update({cur: cash[cur]+100}) for p in st.session_state.players if p != cur]),
     10: ("Go to nearest owned property", lambda cur, pos, cash, pot: pos.update({cur: min((i for i,o in st.session_state.properties.items() if o and BOARD[i][1] in ("prop","rail","util")), key=lambda x:(x-pos[cur])%len(BOARD))})),
     11: ("Pay 100g", lambda cur, pos, cash, pot: cash.update({cur: cash[cur]-100})),
@@ -94,7 +94,28 @@ if 'initialized' not in st.session_state:
             st.rerun()
 
 # ======================
-# MAIN GAME
+# HELPERS
+# ======================
+def add_cash(player, amount):
+    st.session_state.cash[player] += amount
+    if st.session_state.cash[player] < 0:
+        st.session_state.cash[player] = 0
+
+def move_player(player, new_pos):
+    st.session_state.position[player] = new_pos
+
+def apply_chest_effect(roll):
+    text, action = CHEST_CARDS.get(roll, ("?? Unknown roll ??", lambda cur, pos, cash, pot: None))
+    action(st.session_state.players[st.session_state.current_idx], st.session_state.position, st.session_state.cash, st.session_state.free_parking_pot)
+    return text
+
+def apply_chance_effect(roll):
+    text, action = CHANCE_CARDS.get(roll, ("?? Unknown roll ??", lambda cur, pos, cash, pot: None))
+    action(st.session_state.players[st.session_state.current_idx], st.session_state.position, st.session_state.cash, st.session_state.free_parking_pot)
+    return text
+
+# ======================
+# MAIN GAME LOOP
 # ======================
 if st.session_state.get('initialized', False):
     p = st.session_state.players
@@ -106,11 +127,11 @@ if st.session_state.get('initialized', False):
     jail = st.session_state.in_jail
     pot = st.session_state.free_parking_pot
 
-    # === Starting square logic
+    # Starting square
     if not st.session_state.rolled and st.session_state.get("starting_square", "") == "":
         st.session_state.starting_square = BOARD[pos[cur]][0]
 
-    # === HEADER
+    # Header
     col1, col2, col3, col4, col5 = st.columns([2,2,2,2.5,2.5])
     with col1: st.markdown(f"**Turn: {cur}** {'JAILED' if jail[cur] else ''}")
     with col2: st.markdown(f"**Gold: {cash[cur]}g**")
@@ -137,68 +158,6 @@ if st.session_state.get('initialized', False):
 
     if st.session_state.last_message:
         st.success(st.session_state.last_message)
-
-    # ======================
-    # HELPERS
-    # ======================
-    def add_cash(player, amount):
-        st.session_state.cash[player] += amount
-        if st.session_state.cash[player] < 0:
-            st.session_state.cash[player] = 0
-
-    def move_player(player, new_pos):
-        st.session_state.position[player] = new_pos
-
-    def apply_chest_effect(roll):
-        text, action = CHEST_CARDS.get(roll, ("?? Unknown roll ??", lambda cur, pos, cash, pot: None))
-        action(cur, pos, cash, pot)
-        return text
-
-    def apply_chance_effect(roll):
-        text, action = CHANCE_CARDS.get(roll, ("?? Unknown roll ??", lambda cur, pos, cash, pot: None))
-        action(cur, pos, cash, pot)
-        return text
-
-    # ======================
-    # TRADE SYSTEM
-    # ======================
-    if st.button("Trade / Deal" if not st.session_state.trade_mode else "Cancel Trade"):
-        st.session_state.trade_mode = not st.session_state.trade_mode
-        st.rerun()
-
-    if st.session_state.trade_mode:
-        st.subheader("Trade / Deal Maker")
-        others = [p for p in st.session_state.players if p != cur]
-        partner = st.selectbox("Choose a player to trade with:", others)
-
-        st.markdown("---")
-        st.markdown("### What **you** offer:")
-        offer_gold = st.number_input(f"{cur} gives gold:", min_value=0, max_value=cash[cur], step=10)
-        your_props = [i for i,o in owner.items() if o == cur]
-        offer_props = st.multiselect("Properties to trade:", options=your_props, format_func=lambda i: BOARD[i][0])
-        offer_jail_card = (st.session_state.jail_free_card == cur) and st.checkbox("Give Get Out of Jail Free card")
-
-        st.markdown("---")
-        st.markdown("### What **they** offer:")
-        partner_gold = st.number_input(f"{partner} gives gold:", min_value=0, max_value=cash[partner], step=10)
-        partner_props = [i for i,o in owner.items() if o == partner]
-        partner_offer_props = st.multiselect("Properties to receive:", options=partner_props, format_func=lambda i: BOARD[i][0])
-        partner_jail_card = (st.session_state.jail_free_card == partner) and st.checkbox("Receive their Get Out of Jail Free card")
-
-        st.markdown("---")
-        if st.button("Confirm Trade", type="primary"):
-            # Gold
-            cash[cur] -= offer_gold; cash[partner] += offer_gold
-            cash[partner] -= partner_gold; cash[cur] += partner_gold
-            # Properties
-            for prop in offer_props: owner[prop] = partner
-            for prop in partner_offer_props: owner[prop] = cur
-            # Jail card
-            if offer_jail_card: st.session_state.jail_free_card = partner
-            elif partner_jail_card: st.session_state.jail_free_card = cur
-            st.session_state.last_message = f"Trade completed between **{cur}** and **{partner}**!"
-            st.session_state.trade_mode = False
-            st.rerun()
 
     # ======================
     # ROLL & LANDING
@@ -277,6 +236,47 @@ if st.session_state.get('initialized', False):
                 st.session_state.last_message = f"{cur} bought {landed_square[0]}!"
             else:
                 st.error("Not enough gold!")
+
+    # ======================
+    # TRADE SYSTEM
+    # ======================
+    if st.button("Trade / Deal" if not st.session_state.trade_mode else "Cancel Trade"):
+        st.session_state.trade_mode = not st.session_state.trade_mode
+        st.rerun()
+
+    if st.session_state.trade_mode:
+        st.subheader("Trade / Deal Maker")
+        others = [p for p in st.session_state.players if p != cur]
+        partner = st.selectbox("Choose a player to trade with:", others)
+
+        st.markdown("---")
+        st.markdown("### What **you** offer:")
+        offer_gold = st.number_input(f"{cur} gives gold:", min_value=0, max_value=cash[cur], step=10)
+        your_props = [i for i,o in owner.items() if o == cur]
+        offer_props = st.multiselect("Properties to trade:", options=your_props, format_func=lambda i: BOARD[i][0])
+        offer_jail_card = (st.session_state.jail_free_card == cur) and st.checkbox("Give Get Out of Jail Free card")
+
+        st.markdown("---")
+        st.markdown("### What **they** offer:")
+        partner_gold = st.number_input(f"{partner} gives gold:", min_value=0, max_value=cash[partner], step=10)
+        partner_props = [i for i,o in owner.items() if o == partner]
+        partner_offer_props = st.multiselect("Properties to receive:", options=partner_props, format_func=lambda i: BOARD[i][0])
+        partner_jail_card = (st.session_state.jail_free_card == partner) and st.checkbox("Receive their Get Out of Jail Free card")
+
+        st.markdown("---")
+        if st.button("Confirm Trade", type="primary"):
+            # Gold
+            cash[cur] -= offer_gold; cash[partner] += offer_gold
+            cash[partner] -= partner_gold; cash[cur] += partner_gold
+            # Properties
+            for prop in offer_props: owner[prop] = partner
+            for prop in partner_offer_props: owner[prop] = cur
+            # Jail card
+            if offer_jail_card: st.session_state.jail_free_card = partner
+            elif partner_jail_card: st.session_state.jail_free_card = cur
+            st.session_state.last_message = f"Trade completed between **{cur}** and **{partner}**!"
+            st.session_state.trade_mode = False
+            st.rerun()
 
     # ======================
     # NEW GAME
