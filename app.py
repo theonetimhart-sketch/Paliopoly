@@ -2,7 +2,7 @@ import streamlit as st
 
 st.set_page_config(page_title="Paliopoly – Chilled Dude Edition", layout="centered")
 st.title("Paliopoly – Chilled Dude Edition")
-st.markdown("**Real board • Real dice • Real signs • not S6 affiliated, just for fun**")
+st.markdown("**Real board • Real dice • Real signs •Real fun • not S6 affiliated, just for us**")
 
 # ====================== IMAGES ======================
 st.image("https://raw.githubusercontent.com/theonetimhart-sketch/Paliopoly/refs/heads/main/image.png",
@@ -28,37 +28,113 @@ if 'free_parking_pot' not in st.session_state:
     st.session_state.free_parking_pot = 0
 
 # ====================== CARD EFFECTS ======================
-def get_chest_effect(roll):
+def get_chest_effect(roll, player, cash, pos, jail, p):
     effects = {
-        2: ("Chapaa smiles upon you… Advance to GO! (+300g)", "go"),
-        3: ("The Chappa are NOT happy… GO TO JAIL!", "jail"),
-        4: ("Chapaa party! Everyone pays you 50g", "collect_from_all", 50),
-        5: ("Chapaa stole your lunch → Pay 100g", "pay", 100),
-        6: ("Found a shiny flow tree seed → Collect 100g", "collect", 100),
-        7: ("Chapaa pushes you backwards → Go back 3 spaces", "back3"),
-        8: ("Chapaa gives you a boost → Go forward 3 spaces", "forward3"),
-        9: ("Chapaa says help the poor → Pay poorest player 100g", "pay_poorest", 100),
-        10: ("Chapaa calls a taxi → Go to nearest Travel Point", "nearest_rail"),
-        11: ("Chapaa vet bill → Pay 150g", "pay", 150),
-        12: ("Chapaa jackpot! → Collect 200g", "collect", 200)
+        2: ("Chapaa smiles upon you… Advance to GO! (+300g)", lambda: (set_pos(pos, player, 0), add_cash(cash, player, 300))),
+        3: ("The Chappa are NOT happy… GO TO JAIL!", lambda: (set_pos(pos, player, 6), set_jail(jail, player, True))),
+        4: ("Chapaa party! Everyone pays you 50g", lambda: collect_from_all(cash, player, p, 50)),
+        5: ("Chapaa stole your lunch → Pay 100g", lambda: add_cash(cash, player, -100)),
+        6: ("Found a shiny flow tree seed → Collect 100g", lambda: add_cash(cash, player, 100)),
+        7: ("Chapaa pushes you backwards → Go back 3 spaces", lambda: set_pos(pos, player, (pos[player] - 3) % len(BOARD))),
+        8: ("Chapaa gives you a boost → Go forward 3 spaces", lambda: set_pos(pos, player, (pos[player] + 3) % len(BOARD))),
+        9: ("Chapaa says help the poor → Pay poorest player 100g", lambda: pay_poorest(cash, player, p, 100)),
+        10: ("Chapaa calls a taxi → Go to nearest Travel Point", lambda: move_to_nearest(pos, player, [4, 10, 16, 20])),
+        11: ("Chapaa vet bill → Pay 150g", lambda: add_cash(cash, player, -150)),
+        12: ("Chapaa jackpot! → Collect 200g", lambda: add_cash(cash, player, 200))
     }
-    return effects.get(roll, ("?? Unknown roll ??", "none"))
+    text, action = effects.get(roll, ("?? Unknown roll ??", lambda: None))
+    action()
+    return text
 
-def get_chance_effect(roll):
+def get_chance_effect(roll, player, cash, pos, owner, p):
     effects = {
-        2: ("Chapaa warps you → Free Parking! (collect pot)", "free_parking"),
-        3: ("Chapaa forgives your crimes → Get Out of Jail Free!", "jailfree"),
-        4: ("Too generous… Give 50g to every player", "pay_all", 50),
-        5: ("Chapaa tax collector → Pay 200g", "pay", 200),
-        6: ("Chapaa likes your vibe → Collect 150g", "collect", 150),
-        7: ("Follow the flow trees → Move to next shrub property", "next_shrub"),
-        8: ("Chapaa real estate agent → Move to next main property", "next_main"),
-        9: ("Everyone loves you → All players give you 100g", "collect_from_all", 100),
-        10: ("Chapaa drama → Go to nearest property owned by anyone", "nearest_owned"),
-        11: ("Chapaa speeding ticket → Pay 100g", "pay", 100),
-        12: ("Chapaa moon party jackpot → Collect 200g", "collect", 200)
+        2: ("Chapaa warps you → Free Parking! (collect pot)", lambda: (set_pos(pos, player, 12), add_cash(cash, player, st.session_state.free_parking_pot), set_pot(0))),
+        3: ("Chapaa forgives your crimes → Get Out of Jail Free!", lambda: set_jail_free(player)),
+        4: ("Too generous… Give 50g to every player", lambda: pay_all(cash, player, p, 50)),
+        5: ("Chapaa tax collector → Pay 200g", lambda: add_cash(cash, player, -200)),
+        6: ("Chapaa likes your vibe → Collect 150g", lambda: add_cash(cash, player, 150)),
+        7: ("Follow the flow trees → Move to next shrub property", lambda: move_to_next_shrub(pos, player)),
+        8: ("Chapaa real estate agent → Move to next main property", lambda: move_to_next_main(pos, player)),
+        9: ("Everyone loves you → All players give you 100g", lambda: collect_from_all(cash, player, p, 100)),
+        10: ("Chapaa drama → Go to nearest property owned by anyone", lambda: move_to_nearest_owned(pos, player, owner)),
+        11: ("Chapaa speeding ticket → Pay 100g", lambda: add_cash(cash, player, -100)),
+        12: ("Chapaa moon party jackpot → Collect 200g", lambda: add_cash(cash, player, 200))
     }
-    return effects.get(roll, ("?? Unknown roll ??", "none"))
+    text, action = effects.get(roll, ("?? Unknown roll ??", lambda: None))
+    action()
+    return text
+
+# Helper functions for card effects
+def add_cash(cash, player, amount):
+    if cash[player] + amount >= 0:
+        cash[player] += amount
+    else:
+        cash[player] = 0
+
+def set_pos(pos, player, new_pos):
+    pos[player] = new_pos
+
+def set_jail(jail, player, status):
+    jail[player] = status
+
+def set_jail_free(player):
+    st.session_state.jail_free_card = player
+
+def set_pot(amount):
+    st.session_state.free_parking_pot = amount
+
+def collect_from_all(cash, player, players, amount):
+    for p in players:
+        if p != player and cash[p] >= amount:
+            cash[p] -= amount
+            cash[player] += amount
+
+def pay_all(cash, player, players, amount):
+    for p in players:
+        if p != player and cash[player] >= amount:
+            cash[player] -= amount
+            cash[p] += amount
+
+def pay_poorest(cash, player, players, amount):
+    if players:
+        poorest = min(players, key=lambda p: cash[p])
+        if cash[player] >= amount:
+            cash[player] -= amount
+            cash[poorest] += amount
+
+def move_to_nearest(pos, player, targets):
+    current = pos[player]
+    distances = [(t - current) % len(BOARD) for t in targets]
+    min_distance = min(distances)
+    target = targets[distances.index(min_distance)]
+    pos[player] = target
+
+def move_to_next_shrub(pos, player):
+    current = pos[player]
+    shrub_positions = [13, 15, 21, 23]  # Elderwood 1, 2, Maji Wedding 1, 2
+    for pos in sorted(shrub_positions):
+        if pos > current:
+            set_pos(pos, player, pos)
+            return
+    set_pos(pos, player, shrub_positions[0])
+
+def move_to_next_main(pos, player):
+    current = pos[player]
+    main_positions = [1, 3, 7, 10, 13, 15, 21, 23]  # All properties
+    for pos in sorted(main_positions):
+        if pos > current:
+            set_pos(pos, player, pos)
+            return
+    set_pos(pos, player, main_positions[0])
+
+def move_to_nearest_owned(pos, player, owner):
+    current = pos[player]
+    owned = [i for i in range(len(BOARD)) if owner.get(i) and BOARD[i][1] in ("prop", "rail", "util")]
+    if owned:
+        distances = [(i - current) % len(BOARD) for i in owned]
+        min_distance = min(distances)
+        target = owned[distances.index(min_distance)]
+        pos[player] = target
 
 # ====================== INITIALIZATION ======================
 if 'initialized' not in st.session_state:
@@ -106,7 +182,6 @@ if st.session_state.get('initialized', False):
     with col2: st.markdown(f"**Gold: {cash[cur]}g**")
     with col3: st.markdown(f"**Pot: {pot}g**")
     with col4:
-        # NEXT PLAYER BUTTON — LOCKED UNTIL ROLL IS DONE
         if st.session_state.rolled:
             if st.button("Next Player →", type="primary", use_container_width=True):
                 st.session_state.current_idx = (cur_idx + 1) % len(p)
@@ -129,7 +204,6 @@ if st.session_state.get('initialized', False):
         st.rerun()
 
     if st.session_state.trade_mode:
-        # (same trade code as before — unchanged and working)
         st.markdown("### Trade Center")
         with st.expander("Create a deal"):
             p1 = st.selectbox("Player 1", p, index=cur_idx)
@@ -140,14 +214,14 @@ if st.session_state.get('initialized', False):
                 c1, c2 = st.columns(2)
                 with c1:
                     st.write(f"**{p1} gives**")
-                    give_cash = st.number_input("Gold", 0, cash[p1], 0, key="gc2")
-                    give_props = st.multiselect("Properties", [BOARD[i][0] for i,o in owner.items() if o==p1 and BOARD[i][1] in ("prop","rail","util")], key="gp2")
-                    give_jail = st.checkbox("Jail Free Card", st.session_state.jail_free_card == p1, key="gj2")
+                    give_cash = st.number_input("Gold", 0, cash[p1], 0, key="gc3")
+                    give_props = st.multiselect("Properties", [BOARD[i][0] for i,o in owner.items() if o==p1 and BOARD[i][1] in ("prop","rail","util")], key="gp3")
+                    give_jail = st.checkbox("Jail Free Card", st.session_state.jail_free_card == p1, key="gj3")
                 with c2:
                     st.write(f"**{p2} gives**")
-                    take_cash = st.number_input("Gold ", 0, cash[p2], 0, key="tc2")
-                    take_props = st.multiselect("Properties ", [BOARD[i][0] for i,o in owner.items() if o==p2 and BOARD[i][1] in ("prop","rail","util")], key="tp2")
-                    take_jail = st.checkbox("Jail Free Card ", st.session_state.jail_free_card == p2, key="tj2")
+                    take_cash = st.number_input("Gold ", 0, cash[p2], 0, key="tc3")
+                    take_props = st.multiselect("Properties ", [BOARD[i][0] for i,o in owner.items() if o==p2 and BOARD[i][1] in ("prop","rail","util")], key="tp3")
+                    take_jail = st.checkbox("Jail Free Card ", st.session_state.jail_free_card == p2, key="tj3")
 
                 if st.button("EXECUTE TRADE", type="primary"):
                     if give_cash > cash[p1] or take_cash > cash[p2]:
@@ -171,7 +245,7 @@ if st.session_state.get('initialized', False):
 
     st.divider()
 
-    # JAIL LOGIC (unchanged)
+    # JAIL
     if jail[cur]:
         st.error(f"{cur} is in Jail! Turn {st.session_state.jail_turns[cur]+1}/3")
         j1, j2 = st.columns(2)
@@ -260,11 +334,11 @@ if st.session_state.get('initialized', False):
                 msg = f"Paid **{landlord}** {rent}g rent on **{name}**!"
 
             elif typ == "chest":
-                text, _ = get_chest_effect(roll)
+                text = get_chest_effect(roll, cur, cash, pos, jail, p)
                 msg = f"Chappa Chest → {text}"
 
             elif typ == "chance":
-                text, _ = get_chance_effect(roll)
+                text = get_chance_effect(roll, cur, cash, pos, owner, p)
                 msg = f"Chapaa Chance → {text}"
 
             st.session_state.last_message = msg
