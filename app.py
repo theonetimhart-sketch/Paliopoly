@@ -4,11 +4,47 @@ st.set_page_config(page_title="Paliopoly – Chilled Dude Edition", layout="cent
 st.title("Paliopoly – Official In-Game Referee")
 st.markdown("**Real board • Real dice • Real signs • Zero surprises**")
 
+# ======================
+# Editable flavour text
+# ======================
+# Chest & Chance texts are separate for easy editing. Effects below use these texts unchanged.
+CHEST_TEXT = {
+    2: "Advance to GO! (+300g) — A friendly PelicanPilot gives you a lift to Kilima!",
+    3: "GO TO JAIL! — A mischievous Sifuu teleports you to the holding pens.",
+    4: "Everyone pays you 50g — The villagers chip in to celebrate your charm.",
+    5: "Pay 100g — A capybara steals part of your picnic.",
+    6: "Collect 100g — You discover a tucked-away coin pouch.",
+    7: "Go back 3 spaces — A glowing root tangles your feet and drags you back.",
+    8: "Go forward 3 spaces — A playful air sprite zips you ahead.",
+    9: "Pay poorest player 100g — You help out the most in-need villager.",
+    10: "Go to nearest Travel Point — A travelling merchant points you toward the nearest post.",
+    11: "Pay 150g — You contribute to the town festival.",
+    12: "Collect 200g — You find a generous tip from a grateful traveler."
+}
+
+CHANCE_TEXT = {
+    2: "Free Parking! Collect pot — A Sernuk unearths treasure at Free Parking.",
+    3: "Get Out of Jail Free! — A Chapaa slips you a secret key.",
+    4: "Give 50g to everyone — Your pouch overflows and you share the joy.",
+    5: "Pay 200g — You accidentally break a vendor's stall.",
+    6: "Collect 150g — You win a small contest at the square.",
+    7: "Move to next shrub — A mischievous creature nudges you to the next shrub.",
+    8: "Move to next main property — A traveling guide points you onward.",
+    9: "Everyone gives you 100g — The crowd showers you with gifts.",
+    10: "Go to nearest owned property — You are summoned to the nearest owned property.",
+    11: "Pay 100g — Pay a small local fee.",
+    12: "Collect 200g — A surprise reward arrives!"
+}
+
 # ====================== IMAGES ======================
-st.image("https://raw.githubusercontent.com/theonetimhart-sketch/Paliopoly/refs/heads/main/image.png",
-         use_column_width=True)
-st.image("https://raw.githubusercontent.com/theonetimhart-sketch/Paliopoly/refs/heads/main/image2.png",
-         use_column_width=True, caption="The Board")
+st.image(
+    "https://raw.githubusercontent.com/theonetimhart-sketch/Paliopoly/refs/heads/main/image.png",
+    use_column_width=True
+)
+st.image(
+    "https://raw.githubusercontent.com/theonetimhart-sketch/Paliopoly/refs/heads/main/image2.png",
+    use_column_width=True, caption="The Board"
+)
 
 # ====================== BOARD ======================
 BOARD = [
@@ -23,6 +59,8 @@ BOARD = [
     ("Maji Wedding 1", "prop", 200, 15, 45), ("Maji Tax", "tax", 200), ("Maji Wedding 2", "prop", 200, 15, 45)
 ]
 
+FREE_PARKING_INDEX = 12  # confirmed
+
 # ====================== INITIALIZATION ======================
 if 'initialized' not in st.session_state:
     st.session_state.free_parking_pot = 0
@@ -35,7 +73,7 @@ if 'initialized' not in st.session_state:
         else:
             for key in list(st.session_state.keys()):
                 del st.session_state[key]
-            st.session_state.players = players
+            st.session_state.players_list = players
             st.session_state.cash = {p: 1200 for p in players}
             st.session_state.position = {p: 0 for p in players}
             st.session_state.properties = {i: None for i in range(len(BOARD))}
@@ -48,16 +86,17 @@ if 'initialized' not in st.session_state:
             st.session_state.landed = None
             st.session_state.last_message = ""
             st.session_state.trade_mode = False
-            st.session_state.starting_square = ""  # NEW: remembers where turn began
+            st.session_state.starting_square = ""
+            st.session_state.free_parking_pot = 0
             st.session_state.initialized = True
             st.success("Game started! Roll those real dice!")
             st.rerun()
 
 # ====================== MAIN GAME ======================
 if st.session_state.get('initialized', False):
-    p = st.session_state.players
+    players_list = st.session_state.players_list
     cur_idx = st.session_state.current_idx
-    cur = p[cur_idx]
+    cur = players_list[cur_idx]
     cash = st.session_state.cash
     pos = st.session_state.position
     owner = st.session_state.properties
@@ -70,9 +109,12 @@ if st.session_state.get('initialized', False):
 
     # HEADER — NOW SHOWS STARTING SQUARE
     col1, col2, col3, col4, col5 = st.columns([2, 2, 2, 2.5, 2.5])
-    with col1: st.markdown(f"**Turn: {cur}** {'JAILED' if jail[cur] else ''}")
-    with col2: st.markdown(f"**Gold: {cash[cur]}g**")
-    with col3: st.markdown(f"**Pot: {pot}g**")
+    with col1:
+        st.markdown(f"**Turn: {cur}** {'JAILED' if jail[cur] else ''}")
+    with col2:
+        st.markdown(f"**Gold: {cash[cur]}g**")
+    with col3:
+        st.markdown(f"**Pot: {pot}g**")
     with col4:
         if st.session_state.rolled:
             st.success(f"Started on: **{st.session_state.starting_square}**")
@@ -81,80 +123,147 @@ if st.session_state.get('initialized', False):
     with col5:
         if st.session_state.rolled:
             if st.button("Next Player", type="primary", use_container_width=True):
-                st.session_state.current_idx = (cur_idx + 1) % len(p)
+                st.session_state.current_idx = (cur_idx + 1) % len(players_list)
                 st.session_state.doubles_streak = 0
                 st.session_state.rolled = False
                 st.session_state.landed = None
                 st.session_state.trade_mode = False
                 st.session_state.last_message = ""
-                st.session_state.starting_square = ""  # reset for next player
+                st.session_state.starting_square = ""
                 st.rerun()
         else:
             st.button("Next Player", disabled=True, use_container_width=True)
             st.caption("Roll first!")
-
     if st.session_state.last_message:
         st.success(st.session_state.last_message)
 
-    # === CARD EFFECT HELPERS (fixed & safe) ===
+    # === HELPERS ===
     def add_cash(player, amount):
-        st.session_state.cash[player] += amount
-        if st.session_state.cash[player] < 0:
-            st.session_state.cash[player] = 0
+        st.session_state.cash[player] = max(0, st.session_state.cash.get(player, 0) + amount)
 
     def move_player(player, new_pos):
         st.session_state.position[player] = new_pos
 
-    # === CHEST & CHANCE EFFECTS ===
+    def pay_each_from(player_from, amount_each):
+        for p in players_list:
+            if p == player_from:
+                continue
+            add_cash(p, amount_each)
+            add_cash(player_from, -amount_each)
+
+    def collect_each_to(player_to, amount_each):
+        for p in players_list:
+            if p == player_to:
+                continue
+            add_cash(p, -amount_each)
+            add_cash(player_to, amount_each)
+
+    def poorest_player():
+        return min(players_list, key=lambda x: st.session_state.cash.get(x, 0))
+
+    def next_forward_index(current_pos, candidates):
+        for i in candidates:
+            if i > current_pos:
+                return i
+        return candidates[0]
+
+    # === CHEST EFFECTS (logic preserved) ===
     def apply_chest_effect(roll):
-        effects = {
-            2: ("Advance to GO! (+300g)", lambda: (move_player(cur, 0), add_cash(cur, 300))),
-            3: ("GO TO JAIL!", lambda: (move_player(cur, 6), st.session_state.in_jail.update({cur: True}))),
-            4: ("Everyone pays you 50g", lambda: [add_cash(p, -50) or add_cash(cur, 50) for p in p if p != cur]),
-            5: ("Pay 100g", lambda: add_cash(cur, -100)),
-            6: ("Collect 100g", lambda: add_cash(cur, 100)),
-            7: ("Go back 3 spaces", lambda: move_player(cur, (pos[cur] - 3) % len(BOARD))),
-            8: ("Go forward 3 spaces", lambda: move_player(cur, (pos[cur] + 3) % len(BOARD))),
-            9: ("Pay poorest player 100g", lambda: (lambda poorest = min(p, key=lambda x: cash[x]): (add_cash(cur, -100), add_cash(poorest, 100)) if cash[cur] >= 100 else None)()),
-            10: ("Go to nearest Travel Point", lambda: move_player(cur, min([4,9,16,21], key=lambda x: (x - pos[cur]) % len(BOARD)))),
-            11: ("Pay 150g", lambda: add_cash(cur, -150)),
-            12: ("Collect 200g", lambda: add_cash(cur, 200)),
-        }
-        text, action = effects.get(roll, ("?? Unknown roll ??", lambda: None))
-        action()
-        return text
+        # Keep original behaviour — return flavour text from CHEST_TEXT
+        # Effects preserved exactly; only implementation cleaned up.
+        if roll == 2:
+            move_player(cur, 0)
+            add_cash(cur, 300)
+        elif roll == 3:
+            move_player(cur, 6)
+            st.session_state.in_jail[cur] = True
+        elif roll == 4:
+            for pl in players_list:
+                if pl == cur:
+                    continue
+                add_cash(pl, -50)
+                add_cash(cur, 50)
+        elif roll == 5:
+            add_cash(cur, -100)
+        elif roll == 6:
+            add_cash(cur, 100)
+        elif roll == 7:
+            move_player(cur, (pos[cur] - 3) % len(BOARD))
+        elif roll == 8:
+            move_player(cur, (pos[cur] + 3) % len(BOARD))
+        elif roll == 9:
+            poor = poorest_player()
+            if st.session_state.cash.get(cur, 0) >= 100:
+                add_cash(cur, -100)
+                add_cash(poor, 100)
+        elif roll == 10:
+            travel_points = [4, 9, 16, 21]
+            next_tp = min(travel_points, key=lambda x: (x - pos[cur]) % len(BOARD))
+            move_player(cur, next_tp)
+        elif roll == 11:
+            add_cash(cur, -150)
+        elif roll == 12:
+            add_cash(cur, 200)
+        # return text for UI display
+        return CHEST_TEXT.get(roll, "?? Unknown roll ??")
 
+    # === CHANCE EFFECTS (logic preserved) ===
     def apply_chance_effect(roll):
-        effects = {
-            2: ("Free Parking! Collect pot", lambda: (move_player(cur, 12), add_cash(cur, pot), st.session_state.free_parking_pot = 0)),
-            3: ("Get Out of Jail Free!", lambda: st.session_state = st.session_state | {"jail_free_card": cur}),
-            4: ("Give 50g to everyone", lambda: [add_cash(cur, -50) or add_cash(pl, 50) for pl in p if pl != cur]),
-            5: ("Pay 200g", lambda: add_cash(cur, -200)),
-            6: ("Collect 150g", lambda: add_cash(cur, 150)),
-            7: ("Move to next shrub", lambda: move_player(cur, next((i for i in [13,15,22,24] if i > pos[cur]), 13))),
-            8: ("Move to next main property", lambda: move_player(cur, next((i for i in [1,3,7,10,13,15,22,24] if i > pos[cur]), 1))),
-            9: ("Everyone gives you 100g", lambda: [add_cash(pl, -100) or add_cash(cur, 100) for pl in p if pl != cur]),
-            10: ("Go to nearest owned property", lambda: move_player(cur, min((i for i,o in owner.items() if o and BOARD[i][1] in ("prop","rail","util")), key=lambda x: (x-pos[cur])%len(BOARD)))),
-            11: ("Pay 100g", lambda: add_cash(cur, -100)),
-            12: ("Collect 200g", lambda: add_cash(cur, 200)),
-        }
-        text, action = effects.get(roll, ("?? Unknown roll ??", lambda: None))
-        action()
-        return text
+        # Keep original behaviour — return flavour text from CHANCE_TEXT
+        if roll == 2:
+            # Free Parking collect pot
+            move_player(cur, FREE_PARKING_INDEX)
+            add_cash(cur, st.session_state.free_parking_pot)
+            st.session_state.update({"free_parking_pot": 0})
+        elif roll == 3:
+            st.session_state.update({"jail_free_card": cur})
+        elif roll == 4:
+            for pl in players_list:
+                if pl == cur:
+                    continue
+                add_cash(pl, 50)
+                add_cash(cur, -50)
+        elif roll == 5:
+            add_cash(cur, -200)
+        elif roll == 6:
+            add_cash(cur, 150)
+        elif roll == 7:
+            shrubs = [13, 15, 22, 24]
+            nxt = next((i for i in shrubs if i > pos[cur]), shrubs[0])
+            move_player(cur, nxt)
+        elif roll == 8:
+            mains = [1, 3, 7, 10, 13, 15, 22, 24]
+            nxt = next((i for i in mains if i > pos[cur]), mains[0])
+            move_player(cur, nxt)
+        elif roll == 9:
+            for pl in players_list:
+                if pl == cur:
+                    continue
+                add_cash(pl, -100)
+                add_cash(cur, 100)
+        elif roll == 10:
+            owned_indices = [i for i, o in st.session_state.properties.items() if o and BOARD[i][1] in ("prop", "rail", "util")]
+            if owned_indices:
+                nearest = min(owned_indices, key=lambda x: (x - pos[cur]) % len(BOARD))
+                move_player(cur, nearest)
+        elif roll == 11:
+            add_cash(cur, -100)
+        elif roll == 12:
+            add_cash(cur, 200)
+        return CHANCE_TEXT.get(roll, "?? Unknown roll ??")
 
-    # TRADE (unchanged)
+    # TRADE (unchanged placeholder)
     if st.button("Trade / Deal" if not st.session_state.trade_mode else "Cancel Trade"):
         st.session_state.trade_mode = not st.session_state.trade_mode
         st.rerun()
-
     if st.session_state.trade_mode:
-        # ... (your working trade code here — unchanged)
+        st.info("Trade mode active — (your trade UI code here)")
 
     st.divider()
 
-    # JAIL LOGIC (unchanged)
+    # JAIL LOGIC (placeholder)
     if jail[cur]:
-        # ... (unchanged)
+        st.warning("Player is in jail — (jail logic not shown here if unchanged)")
 
     # ROLL & LANDING
     if not st.session_state.rolled:
@@ -178,7 +287,6 @@ if st.session_state.get('initialized', False):
             move_player(cur, new_pos)
             st.session_state.landed = new_pos
             st.session_state.rolled = True
-
             crossed_go = new_pos < old_pos or (old_pos + roll >= len(BOARD))
             if crossed_go and new_pos != 0:
                 add_cash(cur, 300)
@@ -187,38 +295,39 @@ if st.session_state.get('initialized', False):
             space = BOARD[new_pos]
             name, typ = space[0], space[1]
             msg = f"Landed on **{name}**"
-
             if typ == "tax":
                 tax = space[2]
                 add_cash(cur, -tax)
                 st.session_state.free_parking_pot += tax
                 msg = f"Paid **{tax}g {name}** → added to Free Parking pot!"
-
             elif typ == "free":
-                if pot > 0:
-                    add_cash(cur, pot)
-                    msg = f"FREE PARKING JACKPOT! Collected **{pot}g**"
-                    st.session_state.free_parking_pot = 0
+                if st.session_state.free_parking_pot > 0:
+                    add_cash(cur, st.session_state.free_parking_pot)
+                    msg = f"FREE PARKING JACKPOT! Collected **{st.session_state.free_parking_pot}g**"
+                    st.session_state.update({"free_parking_pot": 0})
                     st.balloons()
                 else:
                     msg = "Free Parking — no pot yet!"
-
             elif typ == "go2jail":
                 move_player(cur, 6)
                 st.session_state.in_jail[cur] = True
                 msg = "GO TO JAIL!"
-
-            elif typ in ("prop","rail","util") and owner[new_pos] and owner[new_pos] != cur:
+            elif typ in ("prop", "rail", "util") and owner[new_pos] and owner[new_pos] != cur:
                 landlord = owner[new_pos]
-                rent = space[3] if typ == "prop" else (40 * (2 ** (sum(1 for i,o in owner.items() if o==landlord and BOARD[i][1]=="rail") - 1)) if typ == "rail" else roll * (10 if sum(1 for i,o in owner.items() if o==landlord and BOARD[i][1]=="util")==1 else 20))
+                if typ == "prop":
+                    rent = space[3]
+                elif typ == "rail":
+                    rails_owned = sum(1 for i, o in owner.items() if o == landlord and BOARD[i][1] == "rail")
+                    rent = 40 * (2 ** (rails_owned - 1)) if rails_owned >= 1 else 40
+                else:  # util
+                    utils_owned = sum(1 for i, o in owner.items() if o == landlord and BOARD[i][1] == "util")
+                    rent = roll * (10 if utils_owned == 1 else 20)
                 add_cash(cur, -rent)
                 add_cash(landlord, rent)
                 msg = f"Paid **{landlord}** {rent}g rent on **{name}**!"
-
             elif typ == "chest":
                 text = apply_chest_effect(roll)
                 msg = f"Chappa Chest → {text}"
-
             elif typ == "chance":
                 text = apply_chance_effect(roll)
                 msg = f"Chapaa Chance → {text}"
@@ -226,10 +335,11 @@ if st.session_state.get('initialized', False):
             st.session_state.last_message = msg
             st.rerun()
 
-    # BUY PROPERTY (unchanged)
-    # PLAYER SUMMARY (unchanged)
+    # PLAYER SUMMARY
+    st.write("### Player summary")
+    for pl in players_list:
+        st.write(f"{pl}: Gold {st.session_state.cash[pl]}g — Position {st.session_state.position[pl]} — In jail: {st.session_state.in_jail[pl]}")
 
     if st.button("New Game (Reset Everything)"):
         for key in list(st.session_state.keys()):
             del st.session_state[key]
-        st.rerun()
