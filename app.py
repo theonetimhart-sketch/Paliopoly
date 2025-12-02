@@ -4,9 +4,15 @@ st.set_page_config(page_title="Paliopoly – Chilled Dude Edition", layout="cent
 st.title("Paliopoly – Official In-Game Referee")
 st.markdown("**Real board • Real dice • Real signs • Zero surprises**")
 
+# ====================== IMAGES BACK! ======================
+st.image("https://raw.githubusercontent.com/theonetimhart-sketch/Paliopoly/refs/heads/main/image.png",
+         use_column_width=True)
+st.image("https://raw.githubusercontent.com/theonetimhart-sketch/Paliopoly/refs/heads/main/image2.png",
+         use_column_width=True, caption="The Board")
+
 # ====================== BOARD ======================
 BOARD = [
-    ("GO", "go"), 
+    ("GO", "go"),
     ("Kilima 1", "prop", 80, 6, 18), ("Renown Tax", "tax", 100), ("Kilima 2", "prop", 80, 6, 18),
     ("Travel Point 1", "rail", 150, 40), ("Chappa Chest", "chest"), ("Jail", "jail"),
     ("Bahari 1", "prop", 120, 9, 27), ("Chapaa Chance", "chance"), ("Travel Point 2", "rail", 150, 40),
@@ -17,7 +23,11 @@ BOARD = [
     ("Maji Wedding 1", "prop", 200, 15, 45), ("Maji Tax", "tax", 200), ("Maji Wedding 2", "prop", 200, 15, 45)
 ]
 
-# ====================== CARD EFFECTS BASED ON ROLL ======================
+# ====================== FREE PARKING POT ======================
+if 'free_parking_pot' not in st.session_state:
+    st.session_state.free_parking_pot = 0
+
+# ====================== CARD EFFECTS (ALL FIXED!) ======================
 def get_chest_effect(roll):
     effects = {
         2: ("Chapaa smiles upon you… Advance to GO! (+300g)", "go"),
@@ -32,23 +42,23 @@ def get_chest_effect(roll):
         11: ("Chapaa vet bill → Pay 150g", "pay", 150),
         12: ("Chapaa jackpot! → Collect 200g", "collect", 200)
     }
-    return effects.get(roll, ("?? Something went wrong ??", "none"))
+    return effects.get(roll, ("?? Unknown roll ??", "none"))
 
 def get_chance_effect(roll):
     effects = {
-        2: ("Chapaa teleports you → Free Parking! (no effect)", "free_parking"),
+        2: ("Chapaa warps you → Landed on Free Parking! (collect pot)", "free_parking"),
         3: ("Chapaa forgives your crimes → Get Out of Jail Free!", "jailfree"),
         4: ("Too generous… Give 50g to every player", "pay_all", 50),
-        5: ("Chapaa fine → Pay 200g", "pay", 200),
-        6: Get 150
-    7: Move to next shrub
-    8: Move to next main property
-    9: All give you 100
-    10: Go to nearest owned by any1
-    11: Pay 100
-    12: Get 200
-
-    return effects.get(roll, ("?? Something went wrong ??", "none"))
+        5: ("Chapaa tax collector → Pay 200g", "pay", 200),
+        6: ("Chapaa likes your vibe → Collect 150g", "collect", 150),
+        7: ("Follow the flow trees → Move to next shrub property", "next_shrub"),
+        8: ("Chapaa real estate agent → Move to next main property", "next_main"),
+        9: ("Everyone loves you → All players give you 100g", "collect_from_all", 100),
+        10: ("Chapaa drama → Go to nearest property owned by anyone", "nearest_owned"),
+        11: ("Chapaa speeding ticket → Pay 100g", "pay", 100),
+        12: ("Chapaa moon party jackpot → Collect 200g", "collect", 200)
+    }
+    return effects.get(roll, ("?? Unknown roll ??", "none"))
 
 # ====================== INITIALIZATION ======================
 if 'initialized' not in st.session_state:
@@ -74,8 +84,9 @@ if 'initialized' not in st.session_state:
             st.session_state.landed = None
             st.session_state.last_message = ""
             st.session_state.trade_mode = False
+            st.session_state.free_parking_pot = 0
             st.session_state.initialized = True
-            st.success("Game started! Roll those real dice!")
+            st.success("Game started! Free Parking pot = 0g")
             st.rerun()
 
 # ====================== MAIN GAME ======================
@@ -87,12 +98,15 @@ if st.session_state.get('initialized', False):
     pos = st.session_state.position
     owner = st.session_state.properties
     jail = st.session_state.in_jail
+    pot = st.session_state.free_parking_pot
 
-    col1, col2, col3, col4 = st.columns([2,2,2,1])
+    # Header with Free Parking pot
+    col1, col2, col3, col4, col5 = st.columns([2,2,2,1.5,2])
     with col1: st.markdown(f"**Turn: {cur}** {'JAILED' if jail[cur] else ''}")
     with col2: st.markdown(f"**Gold: {cash[cur]}g**")
     with col3: st.write(f"Space: {BOARD[pos[cur]][0]}")
-    with col4:
+    with col4: st.write(f"**Pot: {pot}g**")
+    with col5:
         if st.button("Next Player"):
             st.session_state.current_idx = (cur_idx + 1) % len(p)
             st.session_state.doubles_streak = 0
@@ -105,7 +119,7 @@ if st.session_state.get('initialized', False):
     if st.session_state.last_message:
         st.success(st.session_state.last_message)
 
-    # ==================== TRADE BUTTON ====================
+    # ==================== TRADE ====================
     if st.button("Trade / Deal" if not st.session_state.trade_mode else "Cancel Trade"):
         st.session_state.trade_mode = not st.session_state.trade_mode
         st.rerun()
@@ -120,15 +134,15 @@ if st.session_state.get('initialized', False):
             else:
                 c1, c2 = st.columns(2)
                 with c1:
-                    st.write(f"**{p1} gives →**")
-                    give_cash = st.number_input("Gold", 0, cash[p1], 0, key="gc")
-                    give_props = st.multiselect("Properties", [BOARD[i][0] for i,o in owner.items() if o==p1 and BOARD[i][1] in ("prop","rail","util")], key="gp")
-                    give_jail = st.checkbox("Get Out of Jail Free card", st.session_state.jail_free_card == p1, key="gj1")
+                    st.write(f"**{p1} gives**")
+                    give_cash = st.number_input("Gold", 0, cash[p1], 0, key="gc1")
+                    give_props = st.multiselect("Properties", [BOARD[i][0] for i,o in owner.items() if o==p1 and BOARD[i][1] in ("prop","rail","util")], key="gp1")
+                    give_jail = st.checkbox("Jail Free Card", st.session_state.jail_free_card == p1, key="gj1")
                 with c2:
-                    st.write(f"**{p2} gives →**")
-                    take_cash = st.number_input("Gold ", 0, cash[p2], 0, key="tc")
-                    take_props = st.multiselect("Properties ", [BOARD[i][0] for i,o in owner.items() if o==p2 and BOARD[i][1] in ("prop","rail","util")], key="tp")
-                    take_jail = st.checkbox("Get Out of Jail Free card ", st.session_state.jail_free_card == p2, key="tj2")
+                    st.write(f"**{p2} gives**")
+                    take_cash = st.number_input("Gold ", 0, cash[p2], 0, key="tc1")
+                    take_props = st.multiselect("Properties ", [BOARD[i][0] for i,o in owner.items() if o==p2 and BOARD[i][1] in ("prop","rail","util")], key="tp1")
+                    take_jail = st.checkbox("Jail Free Card ", st.session_state.jail_free_card == p2, key="tj1")
 
                 if st.button("EXECUTE TRADE", type="primary"):
                     if give_cash > cash[p1] or take_cash > cash[p2]:
@@ -168,11 +182,10 @@ if st.session_state.get('initialized', False):
                 jail[cur] = False
                 st.rerun()
         st.session_state.jail_turns[cur] += 1
-        if st.session_state.jail_turns[cur] >= 3:
-            if cash[cur] >= 100:
-                cash[cur] -= 100
-                jail[cur] = False
-                st.rerun()
+        if st.session_state.jail_turns[cur] >= 3 and cash[cur] >= 100:
+            cash[cur] -= 100
+            jail[cur] = False
+            st.rerun()
         st.stop()
 
     # ==================== ROLL ====================
@@ -181,7 +194,7 @@ if st.session_state.get('initialized', False):
         roll = st.number_input("Total rolled", 2, 12, 7, step=1)
         doubles = st.checkbox("Doubles?")
         if st.button("Confirm Roll"):
-            st.session_state.last_roll = roll  # store for card effects
+            st.session_state.last_roll = roll
             if doubles:
                 st.session_state.doubles_streak += 1
                 if st.session_state.doubles_streak >= 3:
@@ -206,12 +219,24 @@ if st.session_state.get('initialized', False):
             space = BOARD[new_pos]
             name, typ = space[0], space[1]
 
-            # Basic landing messages
             msg = f"Landed on **{name}**"
 
+            # TAX → goes to Free Parking
             if typ == "tax":
-                cash[cur] -= space[2]
-                msg = f"Paid {space[2]}g tax!"
+                tax_amount = space[2]
+                cash[cur] -= tax_amount
+                st.session_state.free_parking_pot += tax_amount
+                msg = f"Paid **{tax_amount}g {name}** → added to Free Parking pot! (Now: {st.session_state.free_parking_pot}g)"
+
+            # FREE PARKING → collect pot
+            elif typ == "free":
+                if st.session_state.free_parking_pot > 0:
+                    cash[cur] += st.session_state.free_parking_pot
+                    msg = f"FREE PARKING JACKPOT! Collected **{st.session_state.free_parking_pot}g**"
+                    st.session_state.free_parking_pot = 0
+                    st.balloons()
+                else:
+                    msg = "Free Parking — no pot yet!"
 
             elif typ == "go2jail":
                 pos[cur] = 6
@@ -232,18 +257,15 @@ if st.session_state.get('initialized', False):
                 cash[landlord] += rent
                 msg = f"Paid **{landlord}** {rent}g rent on **{name}**!"
 
-            # CHEST & CHANCE — NOW 100% SAFE
             elif typ == "chest":
                 text, _ = get_chest_effect(roll)
-                st.session_state.last_message = f"Chappa Chest → {text}"
+                msg = f"Chappa Chest → {text}"
 
             elif typ == "chance":
                 text, _ = get_chance_effect(roll)
-                st.session_state.last_message = f"Chapaa Chance → {text}"
+                msg = f"Chapaa Chance → {text}"
 
-            else:
-                st.session_state.last_message = msg
-
+            st.session_state.last_message = msg
             st.rerun()
 
     # ==================== BUY ====================
@@ -268,7 +290,7 @@ if st.session_state.get('initialized', False):
         if props:
             st.caption("   • " + " • ".join(props))
 
-    if st.button("New Game"):
+    if st.button("New Game (Reset Everything)"):
         for key in list(st.session_state.keys()):
             del st.session_state[key]
         st.rerun()
