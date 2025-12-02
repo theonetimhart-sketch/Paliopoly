@@ -1,7 +1,7 @@
 import streamlit as st
 
 st.set_page_config(page_title="Paliopoly", layout="centered")
-st.title("Paliopoly – Chilled dude Edition")
+st.title("Paliopoly")
 
 # ====================== 24-SQUARE BOARD ======================
 BOARD = [
@@ -54,7 +54,7 @@ CHANCE_CARDS = {
 # ====================== INITIALISE ======================
 if 'players' not in st.session_state:
     st.subheader("Welcome to Paliopoly!")
-    names = st.text_input("Names (comma separated)", "Chilled dude")
+    names = st.text_input("Names (comma separated)", "Chilled Dude")
     if st.button("Start Game"):
         pl = [n.strip() for n in names.split(",") if n.strip()]
         if len(pl) < 2:
@@ -85,7 +85,7 @@ else:
     with col3: st.button("Next player", on_click=lambda: st.session_state.update(current=(st.session_state.current + 1) % len(p)))
 
     # Dice roll
-    dice = st.text_input("Roll dice (2–12)", key="dice")
+    dice = st.text_input("Roll dice (2–12)", key="dice", value="")
     message = ""
     if dice.isdigit():
         roll = int(dice)
@@ -95,6 +95,7 @@ else:
             pos[cur] = new_pos
             space = BOARD[new_pos]
             space_name, space_type = space[0], space[1]
+            st.session_state.dice = ""   # prevents double-move bug
 
             # Pass GO
             if new_pos <= old_pos and new_pos != 0:
