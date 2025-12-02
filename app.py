@@ -1,8 +1,8 @@
 import streamlit as st
 
 st.set_page_config(page_title="Paliopoly – Chilled Dude Edition", layout="centered")
-st.title("Paliopoly – Official In-Game Referee")
-st.markdown("**Real board • Real dice • Real signs • Zero surprises**")
+st.title("Paliopoly – Chilled Dude Edition")
+st.markdown("**Real board • Real dice • Real signs • not S6 affiliated, just for fun**")
 
 # ====================== IMAGES ======================
 st.image("https://raw.githubusercontent.com/theonetimhart-sketch/Paliopoly/refs/heads/main/image.png",
