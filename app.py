@@ -1,13 +1,13 @@
 import streamlit as st
 
 st.set_page_config(page_title="Paliopoly", layout="centered")
-st.title("Paliopoly – Fully Automatic")
+st.title("Paliopoly – Chilled dude Edition")
 
 # ====================== 24-SQUARE BOARD ======================
 BOARD = [
     ("GO", "go"),                           # 0
     ("Kilima 1", "prop", 80, 6, 18),        # 1
-    ("Renown Tax", "tax", 100),             # 2  ← 100g
+    ("Renown Tax", "tax", 100),             # 2 ← 100g
     ("Kilima 2", "prop", 80, 6, 18),        # 3
     ("Travel Point", "rail", 150, 40),      # 4
     ("Chappa Chest", "chest"),             # 5
@@ -23,8 +23,8 @@ BOARD = [
     ("Elderwood 2", "prop", 160, 12, 36),   # 15
     ("Travel Point", "rail", 150, 40),      # 16
     ("Utility 2", "util", 100),             # 17
-    ("Go to Jail", "go2jail"),              # 18  ← corner
-    ("Chappa Chest", "chest"),             # 19  ← second chest
+    ("Go to Jail", "go2jail"),              # 18
+    ("Chappa Chest", "chest"),             # 19
     ("Travel Point", "rail", 150, 40),      # 20
     ("Maji Wedding 1", "prop", 200, 15, 45),# 21
     ("Maji Tax", "tax", 200),               # 22 ← 200g
@@ -38,39 +38,23 @@ SETS = {
     "Maji Wedding": ["Maji Wedding 1", "Maji Wedding 2"]
 }
 
-# ====================== CARDS – YOUR EXACT WORDING ======================
+# ====================== CARDS ======================
 CHEST_CARDS = {
-    2: "Advance to GO → +300g",
-    3: "JAIL do not pass GO → go to Jail",
-    4: "Everyone pays you 50g",
-    5: "Pay 100g",
-    6: "Collect 100g",
-    7: "Back 3 spaces",
-    8: "Forward 3 spaces",
-    9: "Pay poorest player 100g",
-    10: "Go to nearest Travel Point",
-    11: "Pay 150g",
-    12: "Collect 200g"
+    2: "Advance to GO → +300g", 3: "JAIL do not pass GO → go to Jail", 4: "Everyone pays you 50g",
+    5: "Pay 100g", 6: "Collect 100g", 7: "Back 3 spaces", 8: "Forward 3 spaces",
+    9: "Pay poorest player 100g", 10: "Go to nearest Travel Point", 11: "Pay 150g", 12: "Collect 200g"
 }
 
 CHANCE_CARDS = {
-    2: "Free Parking → move there",
-    3: "Get Out of Jail Free Card!",
-    4: "Give 50g to each player",
-    5: "Pay 200g",
-    6: "Get 150g",
-    7: "Move to next Utility",
-    8: "Move to next main property",
-    9: "All give you 100g",
-    10: "Go to nearest property owned by anyone",
-    11: "Pay 100g",
-    12: "Get 200g"
+    2: "Free Parking → move there", 3: "Get Out of Jail Free Card!", 4: "Give 50g to each player",
+    5: "Pay 200g", 6: "Get 150g", 7: "Move to next Utility", 8: "Move to next main property",
+    9: "All give you 100g", 10: "Go to nearest property owned by anyone", 11: "Pay 100g", 12: "Get 200g"
 }
 
 # ====================== INITIALISE ======================
 if 'players' not in st.session_state:
     st.subheader("Welcome to Paliopoly!")
-    names = st.text_input("Names (comma separated)", "Chilled dude, chilled dude, chilled dude, chilled dude")
+    names = st.text_input("Names (comma separated)", "Chilled dude")
     if st.button("Start Game"):
         pl = [n.strip() for n in names.split(",") if n.strip()]
         if len(pl) < 2:
@@ -112,7 +96,7 @@ else:
             space = BOARD[new_pos]
             space_name, space_type = space[0], space[1]
 
-            # Pass GO?
+            # Pass GO
             if new_pos <= old_pos and new_pos != 0:
                 cash[cur] += 300
                 st.balloons()
@@ -123,7 +107,7 @@ else:
                 cash[cur] -= tax_amt
                 message = f"Paid {tax_amt}g tax"
 
-            # Go to Jail corner
+            # Go to Jail
             elif space_type == "go2jail":
                 pos[cur] = 6
                 jail[cur] = True
@@ -135,7 +119,7 @@ else:
                 st.success(f"CHAPPA CHEST → {text}")
                 if roll == 2: pos[cur] = 0; cash[cur] += 300
                 elif roll == 3: pos[cur] = 6; jail[cur] = True
-                elif roll == 4:  # everyone pays you 50
+                elif roll == 4:
                     for pl in p:
                         if pl != cur:
                             cash[pl] -= 50
@@ -144,15 +128,13 @@ else:
                 elif roll == 6: cash[cur] += 100
                 elif roll == 7: pos[cur] = (pos[cur] - 3) % 24
                 elif roll == 8: pos[cur] = (pos[cur] + 3) % 24
-                elif roll == 9:  # pay poorest
+                elif roll == 9:
                     poorest = min(p, key=lambda x: cash[x])
-                    cash[cur] -= 100
-                    cash[poorest] += 100
-                elif roll == 10:  # nearest Travel Point
+                    cash[cur] -= 100; cash[poorest] += 100
+                elif roll == 10:
                     for i in range(new_pos + 1, new_pos + 25):
                         if BOARD[i % 24][1] == "rail":
-                            pos[cur] = i % 24
-                            break
+                            pos[cur] = i % 24; break
                 elif roll == 11: cash[cur] -= 150
                 elif roll == 12: cash[cur] += 200
 
@@ -162,34 +144,29 @@ else:
                 st.success(f"CHAPAA CHANCE → {text}")
                 if roll == 2: pos[cur] = 12
                 elif roll == 3: jailfree[cur] += 1
-                elif roll == 4:  # give 50 each
+                elif roll == 4:
                     for pl in p:
                         if pl != cur:
-                            cash[cur] -= 50
-                            cash[pl] += 50
+                            cash[cur] -= 50; cash[pl] += 50
                 elif roll == 5: cash[cur] -= 200
                 elif roll == 6: cash[cur] += 150
-                elif roll == 7:  # next utility
+                elif roll == 7:
                     for i in range(new_pos + 1, new_pos + 25):
                         if BOARD[i % 24][1] == "util":
-                            pos[cur] = i % 24
-                            break
-                elif roll == 8:  # next main property
+                            pos[cur] = i % 24; break
+                elif roll == 8:
                     for i in range(new_pos + 1, new_pos + 25):
                         if BOARD[i % 24][1] == "prop":
-                            pos[cur] = i % 24
-                            break
-                elif roll == 9:  # all give you 100
+                            pos[cur] = i % 24; break
+                elif roll == 9:
                     for pl in p:
                         if pl != cur:
-                            cash[pl] -= 100
-                            cash[cur] += 100
-                elif roll == 10:  # nearest owned by anyone
+                            cash[pl] -= 100; cash[cur] += 100
+                elif roll == 10:
                     for i in range(new_pos + 1, new_pos + 25):
                         idx = i % 24
                         if owner[idx] is not None and owner[idx] != cur:
-                            pos[cur] = idx
-                            break
+                            pos[cur] = idx; break
                 elif roll == 11: cash[cur] -= 100
                 elif roll == 12: cash[cur] += 200
 
@@ -205,7 +182,7 @@ else:
                     owned = sum(1 for i in range(24) if BOARD[i][1] == "rail" and owner[i] == landlord)
                     rent = owned * 40
                     reason = f"{owned} Travel Points"
-                else:  # util
+                else:
                     owned = sum(1 for i in range(24) if BOARD[i][1] == "util" and owner[i] == landlord)
                     rent = roll * (10 if owned == 2 else 4)
                     reason = f"Utility ×{10 if owned == 2 else 4}"
@@ -226,17 +203,19 @@ else:
 
             st.success(f"Landed on {space_name} → {message or 'nothing extra'}")
 
-    # Current position
     st.markdown(f"**Current square:** {BOARD[pos[cur]][0]}")
 
     # Quick buttons
     colq = st.columns(4)
-    with colq[0]: if st.button("Renown Tax 100g"): cash[cur] -= 100
-    with colq[1]: if st.button("Maji Tax 200g"): cash[cur] -= 200
-    with colq[2]: if st.button("Pay 100g to leave Jail"):
-        if jail[cur] and cash[cur] >= 100:
-            cash[cur] -= 100
-            jail[cur] = False
+    with colq[0]:
+        if st.button("Renown Tax 100g"): cash[cur] -= 100
+    with colq[1]:
+        if st.button("Maji Tax 200g"): cash[cur] -= 200
+    with colq[2]:
+        if st.button("Pay 100g to leave Jail"):
+            if jail[cur] and cash[cur] >= 100:
+                cash[cur] -= 100
+                jail[cur] = False
 
     # Trade
     with st.expander("Trade Properties"):
