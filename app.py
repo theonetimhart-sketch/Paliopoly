@@ -99,7 +99,7 @@ if not st.session_state.initialized:
             st.error("Need 2+ players!")
         else:
             st.session_state.players = players
-            st.session_state.cash = {p:1200 for p in players}
+            st.session_state.cash = {p:1000 for p in players}
             st.session_state.position = {p:0 for p in players}
             st.session_state.properties = {i: None for i in range(len(BOARD))}
             st.session_state.in_jail = {p: False for p in players}
