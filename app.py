@@ -625,16 +625,64 @@ if st.session_state.initialized:
                         st.rerun()
 
     # ======================
-    # Board Ownership overview
-    # ======================
-    st.markdown("---")
-    with st.expander("Board ownership (who owns what?)", expanded=True):
-        rows = []
-        for idx, space in enumerate(BOARD):
-            owner_name = ss['properties'].get(idx) or "Bank"
-            rows.append(f"{idx}: **{space[0]}** — {owner_name}")
-        st.write("\n\n".join(rows))
+# Board Ownership Overview (Grouped)
+# ======================
+st.markdown("---")
+with st.expander("Board ownership (grouped by region)", expanded=True):
 
+    # Define ownable groups by keywords in property names
+    GROUPS = {
+        "Kilima": [],
+        "Bahari": [],
+        "Elderwood": [],
+        "Maji Wedding": [],
+        "Utilities": [],
+        "Travel Points": [],
+    }
+
+    # Keywords that indicate spaces that should NOT appear here
+    UNOWNABLE_KEYWORDS = {
+        "GO",
+        "Tax",
+        "Chest",
+        "Chance",
+        "Jail",
+        "Free Parking",
+    }
+
+    # Categorize each board space
+    for idx, space in enumerate(BOARD):
+        name = space[0]
+
+        # Skip unownables
+        if any(bad in name for bad in UNOWNABLE_KEYWORDS):
+            continue
+
+        # Identify owner
+        owner = ss["properties"].get(idx, "Bank")
+        entry = f"{idx}: **{name}** — {owner}"
+
+        # Sort into a group based on board name
+        if "Kilima" in name:
+            GROUPS["Kilima"].append(entry)
+        elif "Bahari" in name:
+            GROUPS["Bahari"].append(entry)
+        elif "Elderwood" in name:
+            GROUPS["Elderwood"].append(entry)
+        elif "Maji Wedding" in name:
+            GROUPS["Maji Wedding"].append(entry)
+        elif "Utility" in name:
+            GROUPS["Utilities"].append(entry)
+        elif "Travel Point" in name:
+            GROUPS["Travel Points"].append(entry)
+
+    # Display grouped results in required order
+    for label in ["Kilima", "Bahari", "Elderwood", "Maji Wedding", "Utilities", "Travel Points"]:
+        items = GROUPS[label]
+        if items:
+            st.subheader(label)
+            st.write("\n\n".join(items))
+            
     # ======================
     # NEW GAME
     # ======================
