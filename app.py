@@ -39,7 +39,7 @@ if not st.session_state.passed_splash:
                 st.session_state.players = tentative_players
                 st.session_state.passed_splash = True
                 st.success("Password accepted — continuing.")
-                st.experimental_rerun()
+                st.rerun()
             else:
                 st.error("Incorrect password.")
     # HALT here until continue pressed
@@ -329,7 +329,7 @@ if st.session_state.initialized:
             check_game_end()
         else:
             ss['current_idx'] = nxt
-            st.experimental_rerun()
+            st.rerun()
 
     # show main turn header
     if cur:
@@ -369,14 +369,14 @@ if st.session_state.initialized:
                             check_game_end()
                         else:
                             ss['current_idx'] = nxt
-                        st.experimental_rerun()
+                        st.rerun()
                     if no.button("Cancel", key=f"confirm_next_no_{cur}"):
                         ss['confirm_next_for'] = None
-                        st.experimental_rerun()
+                        st.rerun()
                 else:
                     if st.button("Next Player (Confirm)", use_container_width=True):
                         ss['confirm_next_for'] = cur
-                        st.experimental_rerun()
+                        st.rerun()
             else:
                 st.button("Next Player", disabled=True, use_container_width=True)
                 st.caption("Roll first!")
@@ -410,7 +410,7 @@ if st.session_state.initialized:
                         ss['in_jail'][cur] = False
                         ss['jail_turns'][cur] = 0
                         ss['last_message'] = f"{cur} paid 50g and left jail."
-                        st.experimental_rerun()
+                        st.rerun()
                     else:
                         st.error("Not enough gold to pay.")
 
@@ -441,7 +441,7 @@ if st.session_state.initialized:
                             ss['starting_square'] = BOARD[ss['position'][cur]][0]
                             # reset doubles streak because turn effectively ends
                             ss['doubles_streak'] = 0
-                            st.experimental_rerun()
+                            st.rerun()
                 # Doubles streak handling (only if not in jail or just freed)
                 if doubles:
                     ss['doubles_streak'] = ss.get('doubles_streak',0) + 1
@@ -454,7 +454,7 @@ if st.session_state.initialized:
                         ss['starting_square'] = BOARD[pos.get(cur,0)][0]
                         ss['landed'] = 6
                         ss['last_message'] = "3 DOUBLES → JAIL!"
-                        st.experimental_rerun()
+                        st.rerun()
                 else:
                     ss['doubles_streak'] = 0
 
@@ -488,7 +488,7 @@ if st.session_state.initialized:
                         # set rolled True; they must confirm Next Player to move on
                         ss['rolled'] = True
                 # finally re-render
-                st.experimental_rerun()
+                st.rerun()
 
     # ======================
     # BUY PROPERTY (appears after landing when unowned)
@@ -504,7 +504,7 @@ if st.session_state.initialized:
                         ss['cash'][cur] -= price
                         ss['properties'][landed_idx] = cur
                         ss['last_message'] = f"{cur} bought {landed_square[0]}!"
-                        st.experimental_rerun()
+                        st.rerun()
                     else:
                         st.error("Not enough gold!")
 
@@ -527,7 +527,7 @@ if st.session_state.initialized:
                     ss['properties'][idx] = None
                     ss['last_message'] = f"Sold {prop[0]} for {sell_price}g"
                     st.success(ss['last_message'])
-                    st.experimental_rerun()
+                    st.rerun()
         else:
             st.write("No properties to sell to the bank.")
 
@@ -538,7 +538,7 @@ if st.session_state.initialized:
         st.markdown("---")
         if st.button("Bankrupt / Quit (return assets to bank)"):
             ss['confirm_bankrupt_for'] = cur
-            st.experimental_rerun()
+            st.rerun()
     if ss.get('confirm_bankrupt_for') == cur:
         st.warning(f"Are you sure you want to declare **{cur}** bankrupt? This will return all properties to the bank.")
         coly, coln = st.columns(2)
@@ -559,10 +559,10 @@ if st.session_state.initialized:
                 check_game_end()
             else:
                 ss['current_idx'] = nxt
-            st.experimental_rerun()
+            st.rerun()
         if coln.button("Cancel"):
             ss['confirm_bankrupt_for'] = None
-            st.experimental_rerun()
+            st.rerun()
 
     # ======================
     # TRADE SYSTEM (disabled for bankrupt players)
@@ -570,7 +570,7 @@ if st.session_state.initialized:
     if cur and not ss['bankrupt'].get(cur, False):
         if st.button("Trade / Deal" if not ss['trade_mode'] else "Cancel Trade"):
             ss['trade_mode'] = not ss['trade_mode']
-            st.experimental_rerun()
+            st.rerun()
 
         if ss['trade_mode']:
             st.subheader("Trade / Deal Maker")
@@ -622,7 +622,7 @@ if st.session_state.initialized:
                         st.success("Trade completed.")
                         ss['trade_mode'] = False
                         ss['last_message'] = f"Trade completed between **{cur}** and **{partner}**!"
-                        st.experimental_rerun()
+                        st.rerun()
 
     # ======================
     # Board Ownership overview
@@ -642,7 +642,7 @@ if st.session_state.initialized:
     if st.button("New Game (Reset Everything)"):
         for key in list(st.session_state.keys()):
             del st.session_state[key]
-        st.experimental_rerun()
+        st.rerun()
 
     # check for game end after all actions
     check_game_end()
