@@ -303,37 +303,53 @@ if st.session_state.initialized:
                 # ----------------------
                 # Easter eggs: Chilled Dude / lilshrtchit / double 1
                 # ----------------------
-                easter_msg = []
-                player_here = [p for p, pos in ss['position'].items() if pos == new_pos and p != cur]
-                for p in player_here:
-                    p_key = p.lower()
-                    if p_key in ["chilled dude", "lilshrtchit"]:
-                        claimed = ss['easter_eggs_claimed'][cur].get(p_key, False)
-                        if not claimed:
-                            bonus = 10
-                            ss['cash'][cur] += bonus
-                            ss['easter_eggs_claimed'][cur][p_key] = True
-                            if p_key == "chilled dude":
-                                easter_msg.append(f"Landed on **Chilled Dude** → collected {bonus}g! Hang out with Chilled Dude!")
-                            else:
-                                # Subscription button
-                                subscribed = st.button(f"Yes, I'm subscribed to {p}", key=f"sub_{cur}_{p}")
-                                if subscribed:
-                                    easter_msg.append(f"Landed on **{p}** → subscribed bonus {bonus}g collected!")
-                                    ss['cash'][cur] += bonus
+easter_msg = []
+ss = st.session_state
 
-                # Double 1 Easter egg
-                if roll == 2 and doubles:
-                    easter_msg.append("Rolled double 1 → Remember to hydrate!")
+# Ensure we have the Easter egg tracker for this player
+if 'easter_eggs_claimed' not in ss:
+    ss['easter_eggs_claimed'] = {}
+if cur not in ss['easter_eggs_claimed']:
+    ss['easter_eggs_claimed'][cur] = {}
 
-                ss['last_message'] = f"Landed on **{BOARD[new_pos][0]}**. {go_msg} {landing_msg} {' '.join(easter_msg)}"
+# Check if other players are on the same square
+player_here = [p for p, pos in ss['position'].items() if pos == new_pos and p != cur]
 
-                # Extra turn for doubles
-                if doubles and not ss['in_jail'].get(cur, False):
-                    ss['rolled'] = False
-                    ss['last_message'] += " — Doubles! Take another turn."
+for p in player_here:
+    p_key = p.lower()
+    # Only trigger for our special Easter egg players
+    if p_key in ["chilled dude", "lilshrtchit"]:
+        if not ss['easter_eggs_claimed'][cur].get(p_key, False):
+            bonus = 10
+            if p_key == "chilled dude":
+                ss['cash'][cur] += bonus
+                ss['easter_eggs_claimed'][cur][p_key] = True
+                easter_msg.append(f"Landed on **Chilled Dude** → collected {bonus}g! Hang out with Chilled Dude!")
+            else:  # lilshrtchit subscription bonus
+                btn_key = f"sub_{cur}_{p}"
+                if btn_key not in ss:
+                    ss[btn_key] = False
+                if not ss[btn_key]:
+                    if st.button(f"Yes, I'm subscribed to {p}", key=btn_key):
+                        ss[btn_key] = True
+                        ss['cash'][cur] += bonus
+                        ss['easter_eggs_claimed'][cur][p_key] = True
+                        easter_msg.append(f"Landed on **{p}** → subscribed bonus {bonus}g collected!")
 
-            st.experimental_rerun()
+# Double 1 Easter egg
+if roll == 2 and doubles:
+    easter_msg.append("Rolled double 1 → Remember to hydrate!")
+
+# Combine landing message + Easter egg messages
+ss['last_message'] = f"Landed on **{BOARD[new_pos][0]}**. {go_msg} {landing_msg} {' '.join(easter_msg)}"
+
+# Handle extra turn for doubles (if not in jail)
+if doubles and not ss['in_jail'].get(cur, False):
+    ss['rolled'] = False
+    ss['last_message'] += " — Doubles! Take another turn."
+
+# Finally, rerun once after all updates
+st.experimental_rerun()
 
 # ======================
 # BUY PROPERTY IF UNOWNED
