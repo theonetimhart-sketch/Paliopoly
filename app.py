@@ -5,8 +5,8 @@ import random
 # PAGE SETUP
 # ======================
 st.set_page_config(page_title="Paliopoly – Chilled Dude Edition", layout="centered")
-st.title("Paliopoly – Chilled Dude Edition — FINAL & COMPLETE")
-st.markdown("**Full set ×2 rent | Clean grouped ownership | Card moves fully land | Trading | Jail | Everything works**")
+st.title("Paliopoly – Chilled Dude Edition")
+st.markdown("**Full set ×2 rent | Clean grouped ownership | Card moves fully land | Trading | Jail**")
 
 # ======================
 # SPLASH SCREEN
@@ -51,7 +51,7 @@ if not st.session_state.passed_splash:
 # MAIN IMAGES
 # ======================
 st.image("https://raw.githubusercontent.com/theonetimhart-sketch/Paliopoly/refs/heads/main/image.png", use_column_width=True)
-st.image("https://raw.githubusercontent.com/theonetimhart-sketch/Paliopoly/refs/heads/main/image2.png", use_column_width=True, caption="The Board")
+st.image("https://github.com/theonetimhart-sketch/Paliopoly/blob/main/paliopoly.png", use_column_width=True, caption="The Board")
 
 # ======================
 # BOARD WITH COLOR GROUPS
