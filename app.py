@@ -12,45 +12,44 @@ st.markdown("**Includes: jail mechanics, doubles extra turn, chest/chance cards,
 # SPLASH SCREEN
 # ======================
 SPLASH_IMAGE = "https://raw.githubusercontent.com/theonetimhart-sketch/Paliopoly/main/image3.PNG"
-
 if 'passed_splash' not in st.session_state:
-    st.session_state.passed_splash = False
+    st.session_state['passed_splash'] = False
 
-if not st.session_state.passed_splash:
+if not st.session_state['passed_splash']:
     st.image(SPLASH_IMAGE, use_column_width=True)
-    st.markdown("### Welcome to Paliopoly — ShorTee hosting!")
-    st.write("Make sure everyone playing is watching at [lilshrtchit Twitch](https://www.twitch.tv/lilshrtchit)")
+    st.markdown("### Hi ShorTee, thanks for hosting!")
+    st.write("Make sure everyone playing is watching at https://www.twitch.tv/lilshrtchit")
 
+    # Default player names
     if 'splash_players_input' not in st.session_state:
-        st.session_state.splash_players_input = "Chilled Dude, TJediTim, lilshrtchit.ttv"
+        st.session_state['splash_players_input'] = "Chilled Dude, TJediTim, lilshrtchit.ttv"
 
-    st.session_state.splash_players_input = st.text_input(
-        "Enter player names (comma separated):", st.session_state.splash_players_input
+    # Text input for player names
+    st.session_state['splash_players_input'] = st.text_input(
+        "Confirm player names (comma separated):", 
+        st.session_state['splash_players_input']
     )
 
-    tentative_players = [n.strip() for n in st.session_state.splash_players_input.split(",") if n.strip()]
+    tentative_players = [n.strip() for n in st.session_state['splash_players_input'].split(",") if n.strip()]
 
-    # If Chilled Dude is present
-    if any(p.lower() == "chilled dude" for p in tentative_players):
-        st.success("Chilled Dude is present — ready to play!")
+    if "Chilled Dude" in tentative_players:
+        st.success("Chilled Dude is playing — ready to go!")
         if st.button("Continue"):
-            st.session_state.players = tentative_players
-            st.session_state.passed_splash = True
+            st.session_state['players'] = tentative_players
+            st.session_state['passed_splash'] = True
             st.rerun()
     else:
-        pwd = st.text_input(
-            "Chilled Dude isn't present? Enter his Discord name to continue...", type="password"
-        )
+        pwd = st.text_input("Chilled Dude isn't here? Enter host password to continue...", type="password")
         if st.button("Continue"):
             if pwd == "TJediTim":
-                st.session_state.players = tentative_players
-                st.session_state.passed_splash = True
                 st.success("Password accepted — continuing.")
+                st.session_state['players'] = tentative_players
+                st.session_state['passed_splash'] = True
                 st.rerun()
             else:
                 st.error("Incorrect password.")
 
-    st.stop()
+    st.stop()  # Halt here until splash complete
 
 # ======================
 # BOARD SETUP
