@@ -5,13 +5,13 @@ import random
 # PAGE SETUP
 # ======================
 st.set_page_config(page_title="Paliopoly – Chilled Dude Edition", layout="centered")
-st.title("Paliopoly – Chilled Dude Edition — Fully Fixed")
-st.markdown("**All bugs fixed: jail, doubles, GO money, card moves, confirm turn, bankrupt removal, shuffled decks**")
+st.title("Paliopoly – Chilled Dude Edition — FINAL FIXED")
+st.markdown("**All your bugs crushed. Jail, doubles, GO money, cards, confirm turn, bankrupt skip — everything works.**")
 
 # ======================
 # SPLASH SCREEN
 # ======================
-SPLASH_IMAGE = "https://raw.githubusercontent.com/theonetimseven/Paliopoly/main/image3.PNG"
+SPLASH_IMAGE = "https://raw.githubusercontent.com/theonetimhart-sketch/Paliopoly/main/image3.PNG"
 if 'passed_splash' not in st.session_state:
     st.session_state.passed_splash = False
 
@@ -50,8 +50,8 @@ if not st.session_state.passed_splash:
 # ======================
 # MAIN IMAGES
 # ======================
-st.image("https://raw.githubusercontent.com/theonetimseven/Paliopoly/refs/heads/main/image.png", use_column_width=True)
-st.image("https://raw.githubusercontent.com/theonetimseven/Paliopoly/refs/heads/main/image2.png", use_column_width=True, caption="The Board")
+st.image("https://raw.githubusercontent.com/theonetimhart-sketch/Paliopoly/refs/heads/main/image.png", use_column_width=True)
+st.image("https://raw.githubusercontent.com/theonetimhart-sketch/Paliopoly/refs/heads/main/image2.png", use_column_width=True, caption="The Board")
 
 # ======================
 # BOARD
@@ -69,13 +69,13 @@ BOARD = [
 ]
 
 # ======================
-# CARDS — FIXED LAMBDA SYNTAX
+# CARDS — FIXED & CLEAN
 # ======================
-def chest_go_to_go(p, ss, roll):
+def chest_go_to_go(p, ss, _):
     ss['position'][p] = 0
     ss['cash'][p] += 300
 
-def chest_go_to_jail(p, ss, roll):
+def chest_go_to_jail(p, ss, _):
     ss['position'][p] = 6
     ss['in_jail'][p] = True
     ss['jail_turns'][p] = 0
@@ -85,18 +85,18 @@ CHEST_CARDS_LIST = [
     ("Proudhorned Sernuk teleports you, GO TO JAIL!", chest_go_to_jail),
     ("Elouisa found a cryptid, everyone pays you 50g not to tell them about it",
      lambda p,ss,_: [ss['cash'].__setitem__(q, ss['cash'][q]-50) or ss['cash'].__setitem__(p, ss['cash'][p]+50) for q in ss['players'] if q!=p]),
-    ("Eshe made Kenli enforce the land tax. Pay 100g", lambda p,ss,_: (ss['cash'].__setitem__(p, ss['cash'][p]-100), ss.__setitem__('free_parking_pot', ss['free_parking_pot'] + 100))),
+    ("Eshe made Kenli enforce the land tax. Pay 100g", lambda p,ss,_: (ss['cash'].__setitem__(p, ss['cash'][p]-100), ss.__setitem__('free_parking_pot', ss['free_parking_pot']+100))),
     ("Collect 100g from Subira for helping the order", lambda p,ss,_: ss['cash'].__setitem__(p, ss['cash'][p]+100)),
-    ("Ogupu drags you into a whirlpool and moves you back 3 spaces", lambda p,ss,_: ss['position'].__setitem__(p, (ss['position'][p]-3) % len(BOARD))),
+    ("Ogupu drags you into a whirlpool and moves you back 3 spaces", lambda p,ss,_: ss['position'].__setitem__(p, (ss['position'][p]-3)%len(BOARD))),
     ("Bluebristle Muujin pushes you forward 3 spaces", lambda p,ss,_: (old:=ss['position'][p], ss['position'].__setitem__(p, (old+3)%len(BOARD)), ss['cash'].__setitem__(p, ss['cash'][p]+300) if ss['position'][p] < old else None)),
     ("Tamala tricks you into paying the poorest player 100g",
      lambda p,ss,_: (lambda poorest=min([x for x in ss['players'] if not ss['bankrupt'].get(x,False)], key=lambda x:ss['cash'][x]): (ss['cash'].__setitem__(p, ss['cash'][p]-100), ss['cash'].__setitem__(poorest, ss['cash'][poorest]+100)))()),
     ("You followed a Peki to the next Travel Point", lambda p,ss,_: (old:=ss['position'][p], ss['position'].__setitem__(p, min([4,9,16,20], key=lambda x:(x-old)%len(BOARD))), ss['cash'].__setitem__(p, ss['cash'][p]+300) if ss['position'][p] < old else None)),
-    ("Tish has new furniture, pay 150g", lambda p,ss,_: (ss['cash'].__setitem__(p, ss['cash'][p]-150), ss.__setitem__('free_parking_pot', ss['free_parking_pot'] + 150))),
+    ("Tish has new furniture, pay 150g", lambda p,ss,_: (ss['cash'].__setitem__(p, ss['cash'][p]-150), ss.__setitem__('free_parking_pot', ss['free_parking_pot']+150))),
     ("Zeki drops off some treasure. collect 200g", lambda p,ss,_: ss['cash'].__setitem__(p, ss['cash'][p]+200))
 ]
 
-def chance_free_parking(p, ss, roll):
+def chance_free_parking(p, ss, _):
     old = ss['position'][p]
     ss['position'][p] = 12
     if ss['position'][p] < old:
@@ -104,25 +104,25 @@ def chance_free_parking(p, ss, roll):
     ss['cash'][p] += ss['free_parking_pot']
     ss['free_parking_pot'] = 0
 
-def chance_get_out_of_jail(p, ss, roll):
+def chance_get_out_of_jail(p, ss, _):
     ss['jail_free_card'] = p
 
 CHANCE_CARDS_LIST = [
     ("Tau spots something buried, go to Free Parking to dig it up and collect whatever is there", chance_free_parking),
     ("Plumehound buried a Get Out of Jail Free card, go ahead and keep that one", chance_get_out_of_jail),
     ("Jina found a rare artifact. Give 50g to all the humans", lambda p,ss,_: [ss['cash'].__setitem__(q, ss['cash'][q]+50) or ss['cash'].__setitem__(p, ss['cash'][p]-50) for q in ss['players'] if q!=p]),
-    ("Caught in the restricted section, pay Caleri 200g", lambda p,ss,_: (ss['cash'].__setitem__(p, ss['cash'][p]-200), ss.__setitem__('free_parking_pot', ss['free_parking_pot'] + 200))),
+    ("Caught in the restricted section, pay Caleri 200g", lambda p,ss,_: (ss['cash'].__setitem__(p, ss['cash'][p]-200), ss.__setitem__('free_parking_pot', ss['free_parking_pot']+200))),
     ("Collect 150g for promoting Jels new wardrobe", lambda p,ss,_: ss['cash'].__setitem__(p, ss['cash'][p]+150)),
     ("Follow a flutterfox to the next shrub", lambda p,ss,_: (old:=ss['position'][p], ss['position'].__setitem__(p, next((i for i in [11,17] if i>old), 11)), ss['cash'].__setitem__(p, ss['cash'][p]+300) if ss['position'][p] < old else None)),
     ("Ormuu pushes you to next main property", lambda p,ss,_: (old:=ss['position'][p], ss['position'].__setitem__(p, next((i for i in [1,3,7,10,13,15,21,23] if i>old), 1)), ss['cash'].__setitem__(p, ss['cash'][p]+300) if ss['position'][p] < old else None)),
     ("Badruu gives you new fruit, everyone gives you 100g for the seeds", lambda p,ss,_: [ss['cash'].__setitem__(q, ss['cash'][q]-100) or ss['cash'].__setitem__(p, ss['cash'][p]+100) for q in ss['players'] if q!=p]),
     ("Go and help the truffle at the nearest owned property", lambda p,ss,_: (old:=ss['position'][p], target:=min([i for i,o in ss['properties'].items() if o and BOARD[i][1] in ('prop','rail','util')], key=lambda x:(x-old)%len(BOARD), default=old), ss['position'].__setitem__(p, target), ss['cash'].__setitem__(p, ss['cash'][p]+300) if target != old and ss['position'][p] < old else None)),
-    ("you lost the Gardners runestone, Pay 100g", lambda p,ss,_: (ss['cash'].__setitem__(p, ss['cash'][p]-100), ss.__setitem__('free_parking_pot', ss['free_parking_pot'] + 100))),
+    ("you lost the Gardners runestone, Pay 100g", lambda p,ss,_: (ss['cash'].__setitem__(p, ss['cash'][p]-100), ss.__setitem__('free_parking_pot', ss['free_parking_pot']+100))),
     ("Reth just started selling beanburgers and flowtato fries, he pays you 200g", lambda p,ss,_: ss['cash'].__setitem__(p, ss['cash'][p]+200))
 ]
 
 # ======================
-# INITIALIZE GAME
+# INITIALIZE GAME (only once after splash)
 # ======================
 if 'initialized' not in st.session_state:
     st.session_state.update({
@@ -241,7 +241,7 @@ if not ss.rolled:
         if not ss.in_jail.get(cur):
             old_pos = ss.position[cur]
             new_pos = (old_pos + roll) % len(BOARD)
-            passed_go = new_pos <= old_pos or new_pos == 0
+            passed_go = (old_pos + roll >= len(BOARD)) or new_pos == 0
             if passed_go:
                 ss.cash[cur] += 300
                 st.balloons()
@@ -276,23 +276,32 @@ if not ss.rolled:
                     return " ".join(msg)
                 elif typ in ("prop","rail","util") and ss.properties.get(pos) and ss.properties[pos] != cur:
                     owner = ss.properties[pos]
-                    rent = sq[3] if typ == "prop" else (40 * (2 ** (sum(1 for i,o in ss.properties.items() if o==owner and BOARD[i][1]=="rail")-1)) if typ == "rail" else roll * (10 if sum(1 for i,o in ss.properties.items() if o==owner and BOARD[i][1]=="util")==2 else 4))
+                    if typ == "prop":
+                        rent = sq[3]
+                    elif typ == "rail":
+                        owned = sum(1 for i,o in ss.properties.items() if o==owner and BOARD[i][1]=="rail")
+                        rent = 40 * (2 ** (owned-1))
+                    else:
+                        owned = sum(1 for i,o in ss.properties.items() if o==owner and BOARD[i][1]=="util")
+                        rent = roll * (10 if owned == 2 else 4)
                     ss.cash[cur] -= rent
                     ss.cash[owner] += rent
                     msg.append(f"Paid {owner} {rent}g rent")
                 elif typ == "chest":
-                    deck = ss.chest_deck or (ss.chest_deck = random.sample(CHEST_CARDS_LIST, len(CHEST_CARDS_LIST)))
-                    card = deck.pop(0)
-                    deck.append(card)
+                    if not ss.chest_deck:
+                        ss.chest_deck = random.sample(CHEST_CARDS_LIST, len(CHEST_CARDS_LIST))
+                    card = ss.chest_deck.pop(0)
+                    ss.chest_deck.append(card)
                     old = ss.position[cur]
                     card[1](cur, ss, roll)
                     msg.append(f"Chest: {card[0]}")
                     if ss.position[cur] != old:
                         msg.append(process(ss.position[cur], depth+1))
                 elif typ == "chance":
-                    deck = ss.chance_deck or (ss.chance_deck = random.sample(CHANCE_CARDS_LIST, len(CHANCE_CARDS_LIST)))
-                    card = deck.pop(0)
-                    deck.append(card)
+                    if not ss.chance_deck:
+                        ss.chance_deck = random.sample(CHANCE_CARDS_LIST, len(CHANCE_CARDS_LIST))
+                    card = ss.chance_deck.pop(0)
+                    ss.chance_deck.append(card)
                     old = ss.position[cur]
                     card[1](cur, ss, roll)
                     msg.append(f"Chance: {card[0]}")
