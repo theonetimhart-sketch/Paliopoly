@@ -4,32 +4,29 @@ import random
 # ======================
 # PAGE SETUP
 # ======================
-st.set_page_config(page_title="Paliopoly – Chilled Dude Edition (Full)", layout="centered")
-st.title("Paliopoly – Chilled Dude Edition — Full Version")
-st.markdown("**Full game with fixes: jail, doubles, cards, GO money, ownership view, next-turn confirm, endgame handling, splash screen**")
+st.set_page_config(page_title="Paliopoly – Chilled Dude Edition (Fixed)", layout="centered")
+st.title("Paliopoly – Chilled Dude Edition — Improved")
+st.markdown("**Fixes: jail, doubles, cards, GO money, ownership view, next-turn confirm, endgame handling**")
 
 # ======================
-# SPLASH SCREEN / CHILLED DUDE CHECK
+# SPLASH SCREEN / STREAMER INFO
 # ======================
-if 'splash_shown' not in st.session_state:
-    st.session_state.splash_shown = False
+if 'splash_done' not in st.session_state:
+    st.session_state['splash_done'] = False
 
-if not st.session_state.splash_shown:
-    st.image("https://raw.githubusercontent.com/theonetimhart-sketch/Paliopoly/refs/heads/main/image.png", use_column_width=True)
-    st.markdown("### Welcome to Paliopoly — Chilled Dude Edition!")
-    st.markdown("Check out the Twitch stream: [TJediTim](https://twitch.tv/tjeditim)")
-    if st.checkbox("I am Chilled Dude"):
-        st.session_state.is_chilled_dude = True
-    else:
-        st.session_state.is_chilled_dude = False
-    if st.button("Start"):
-        st.session_state.splash_shown = True
+if not st.session_state['splash_done']:
+    st.subheader("Welcome to Paliopoly — Chilled Dude Edition!")
+    st.markdown("Check out the Twitch stream: **TJediTim**")
+    st.markdown("Check out the Twitch stream: **ShorTee / lilshrtchit**")
+    if st.button("Start Game / Continue"):
+        st.session_state['splash_done'] = True
         st.experimental_rerun()
-    st.stop()
+    st.stop()  # Stop here until the splash is acknowledged
 
 # ======================
 # IMAGES
 # ======================
+st.image("https://raw.githubusercontent.com/theonetimhart-sketch/Paliopoly/refs/heads/main/image.png", use_column_width=True)
 st.image("https://raw.githubusercontent.com/theonetimhart-sketch/Paliopoly/refs/heads/main/image2.png", use_column_width=True, caption="The Board")
 st.image("https://raw.githubusercontent.com/theonetimhart-sketch/Paliopoly/refs/heads/main/image3.PNG", use_column_width=True)
 
@@ -49,7 +46,7 @@ BOARD = [
 ]
 
 # ======================
-# CARD FLAVOUR TEXT
+# CHEST CARD ACTIONS
 # ======================
 def chest_go_to_go(player, ss, roll):
     ss['position'][player] = 0
@@ -63,17 +60,21 @@ def chest_go_to_jail(player, ss, roll):
 CHEST_CARDS_LIST = [
     ("Chapaa Chase to GO!", chest_go_to_go),
     ("Proudhorned Sernuk teleports you, GO TO JAIL!", chest_go_to_jail),
-    ("Elouisa found a cryptid, everyone pays you 50g", lambda p,ss,roll: [ss['cash'].__setitem__(q, ss['cash'][q]-50) or ss['cash'].__setitem__(p, ss['cash'][p]+50) for q in ss['players'] if q!=p]),
+    ("Elouisa found a cryptid, everyone pays you 50g not to tell them about it", 
+        lambda p,ss,roll: [ss['cash'].__setitem__(q, ss['cash'][q]-50) or ss['cash'].__setitem__(p, ss['cash'][p]+50) for q in ss['players'] if q!=p]),
     ("Eshe made Kenli enforce the land tax. Pay 100g", lambda p,ss,roll: ss['cash'].__setitem__(p, ss['cash'][p]-100)),
     ("Collect 100g from Subira for helping the order", lambda p,ss,roll: ss['cash'].__setitem__(p, ss['cash'][p]+100)),
-    ("Ogupuu drags you back 3 spaces", lambda p,ss,roll: ss['position'].__setitem__(p, (ss['position'][p]-3) % len(BOARD))),
+    ("Ogupuu drags you into a whirlpool and moves you back 3 spaces", lambda p,ss,roll: ss['position'].__setitem__(p, (ss['position'][p]-3) % len(BOARD))),
     ("Bluebristle Muujin pushes you forward 3 spaces", lambda p,ss,roll: ss['position'].__setitem__(p, (ss['position'][p]+3) % len(BOARD))),
     ("Tamala tricks you into paying the poorest player 100g", lambda p,ss,roll: (lambda poorest=min([x for x in ss['players'] if not ss['bankrupt'].get(x,False)], key=lambda x: ss['cash'][x]): (ss['cash'].__setitem__(p, ss['cash'][p]-100), ss['cash'].__setitem__(poorest, ss['cash'][poorest]+100)))()),
     ("You followed a Peki to the next Travel Point", lambda p,ss,roll: ss['position'].__setitem__(p, min([4,9,16,21], key=lambda x:(x-ss['position'][p])%len(BOARD)))),
     ("Tish has new furniture, pay 150g", lambda p,ss,roll: ss['cash'].__setitem__(p, ss['cash'][p]-150)),
-    ("Zeki drops off some treasure, collect 200g", lambda p,ss,roll: ss['cash'].__setitem__(p, ss['cash'][p]+200))
+    ("Zeki drops off some treasure. collect 200g", lambda p,ss,roll: ss['cash'].__setitem__(p, ss['cash'][p]+200))
 ]
 
+# ======================
+# CHANCE CARD ACTIONS
+# ======================
 def chance_free_parking(player, ss, roll):
     ss['position'][player] = 12
     ss['cash'][player] += ss['free_parking_pot']
@@ -83,17 +84,17 @@ def chance_get_out_of_jail(player, ss, roll):
     ss['jail_free_card'] = player
 
 CHANCE_CARDS_LIST = [
-    ("Tau spots something buried, go to Free Parking to dig it up", chance_free_parking),
-    ("Plumehound buried a Get Out of Jail Free card", chance_get_out_of_jail),
-    ("Jina found a rare artifact. Give 50g to all others", lambda p,ss,roll: [ss['cash'].__setitem__(q, ss['cash'][q]+50) or ss['cash'].__setitem__(p, ss['cash'][p]-50) for q in ss['players'] if q!=p]),
-    ("Caught in restricted section, pay 200g", lambda p,ss,roll: ss['cash'].__setitem__(p, ss['cash'][p]-200)),
+    ("Tau spots something buried, go to Free Parking to dig it up and collect whatever is there", chance_free_parking),
+    ("Plumehound buried a Get Out of Jail Free card, go ahead and keep that one", chance_get_out_of_jail),
+    ("Jina found a rare artifact. Give 50g to all the humans", lambda p,ss,roll: [ss['cash'].__setitem__(q, ss['cash'][q]+50) or ss['cash'].__setitem__(p, ss['cash'][p]-50) for q in ss['players'] if q!=p]),
+    ("Caught in the restricted section, pay Caleri 200g", lambda p,ss,roll: ss['cash'].__setitem__(p, ss['cash'][p]-200)),
     ("Collect 150g for promoting Jels new wardrobe", lambda p,ss,roll: ss['cash'].__setitem__(p, ss['cash'][p]+150)),
     ("Follow a flutterfox to the next shrub", lambda p,ss,roll: ss['position'].__setitem__(p, next((i for i in [13,15,22,24] if i>ss['position'][p]),13))),
-    ("Ormuu pushes you to next main property", lambda p,ss,roll: ss['position'].__setitem__(p, next((i for i in [1,3,7,10,13,15,21,23] if i>ss['position'][p]),1))),
-    ("Badruu gives you new fruit, everyone gives you 100g", lambda p,ss,roll: [ss['cash'].__setitem__(q, ss['cash'][q]-100) or ss['cash'].__setitem__(p, ss['cash'][p]+100) for q in ss['players'] if q!=p]),
-    ("Go and help the trufflet at nearest owned property", lambda p,ss,roll: ss['position'].__setitem__(p, min([i for i,o in ss['properties'].items() if o and BOARD[i][1] in ('prop','rail','util')], key=lambda x:(x-ss['position'][p])%len(BOARD)))),
-    ("You lost the Gardners runestone, pay 100g", lambda p,ss,roll: ss['cash'].__setitem__(p, ss['cash'][p]-100)),
-    ("Reth sells beanburgers and flowtato fries, pays you 200g", lambda p,ss,roll: ss['cash'].__setitem__(p, ss['cash'][p]+200))
+    ("Ormuu pushes you to next main property", lambda p,ss,roll: ss['position'].__setitem__(p, next((i for i in [1,3,7,10,13,15,22,24] if i>ss['position'][p]),1))),
+    ("Badruu gives you new fruit, everyone gives you 100g for the seeds", lambda p,ss,roll: [ss['cash'].__setitem__(q, ss['cash'][q]-100) or ss['cash'].__setitem__(p, ss['cash'][p]+100) for q in ss['players'] if q!=p]),
+    ("Go and help the trufflet at the nearest owned property", lambda p,ss,roll: ss['position'].__setitem__(p, min([i for i,o in ss['properties'].items() if o and BOARD[i][1] in ('prop','rail','util')], key=lambda x:(x-ss['position'][p])%len(BOARD)))),
+    ("you lost the Gardners runestone, Pay 100g", lambda p,ss,roll: ss['cash'].__setitem__(p, ss['cash'][p]-100)),
+    ("Reth just started selling beanburgers and flowtato fries, he pays you 200g", lambda p,ss,roll: ss['cash'].__setitem__(p, ss['cash'][p]+200))
 ]
 
 # ======================
@@ -120,47 +121,61 @@ def init_game_state():
             'free_parking_pot': 0,
             'bankrupt': {},
             'confirm_bankrupt_for': None,
-            'confirm_next_for': None
+            'confirm_next_for': None,
+            'easter_eggs_claimed': {}
         })
 
 init_game_state()
 
+# Initialize per-player Easter eggs if empty
+for p in st.session_state.get('players', []):
+    if p not in st.session_state['easter_eggs_claimed']:
+        st.session_state['easter_eggs_claimed'][p] = {
+            "Chilled Dude": False,
+            "lilshrtchit": False
+
 # ======================
-# PLAYER SETUP
+# START GAME UI
 # ======================
 if not st.session_state.initialized:
-    st.subheader("Start Paliopoly Session")
-    names = st.text_input("Player names (comma separated)", "Chilled Dude, TJediTim, lilshrtchit.ttv")
+    st.subheader("Welcome to Paliopoly — Chilled Dude Edition!")
+    st.markdown("Check out the Twitch stream: TJediTim")
+
+    # Splash / start input
+    names = st.text_input("Player names (comma separated)", "Chilled Dude, lilshrtchit, Player3")
     if st.button("Start Game"):
         players = [n.strip() for n in names.split(",") if n.strip()]
         if len(players) < 2:
-            st.error("Need 2+ players!")
+            st.error("Need at least 2 players to start!")
         else:
-            ss = st.session_state
-            ss['players'] = players
-            ss['cash'] = {p:1000 for p in players}
-            ss['position'] = {p:0 for p in players}
-            ss['properties'] = {i: None for i in range(len(BOARD))}
-            ss['in_jail'] = {p:False for p in players}
-            ss['jail_turns'] = {p:0 for p in players}
-            ss['jail_free_card'] = None
-            ss['current_idx'] = 0
-            ss['doubles_streak'] = 0
-            ss['rolled'] = False
-            ss['landed'] = None
-            ss['last_message'] = ""
-            ss['trade_mode'] = False
-            ss['starting_square'] = ""
-            ss['free_parking_pot'] = 0
-            ss['bankrupt'] = {p:False for p in players}
-            ss['initialized'] = True
-            st.success("Game started! Roll those real dice!")
+            # Initialize player session state
+            st.session_state.players = players
+            st.session_state.cash = {p: 1000 for p in players}
+            st.session_state.position = {p: 0 for p in players}
+            st.session_state.properties = {i: None for i in range(len(BOARD))}
+            st.session_state.in_jail = {p: False for p in players}
+            st.session_state.jail_turns = {p: 0 for p in players}
+            st.session_state.jail_free_card = None
+            st.session_state.current_idx = 0
+            st.session_state.doubles_streak = 0
+            st.session_state.rolled = False
+            st.session_state.landed = None
+            st.session_state.last_message = ""
+            st.session_state.trade_mode = False
+            st.session_state.starting_square = ""
+            st.session_state.free_parking_pot = 0
+            st.session_state.bankrupt = {p: False for p in players}
+            # Initialize Easter eggs tracker per player
+            st.session_state.easter_eggs_claimed = {p: {} for p in players}
+            st.session_state.initialized = True
+            st.success("Game started! Roll those dice!")
             st.experimental_rerun()
-            
+
 # ======================
 # HELPER FUNCTIONS
 # ======================
 def next_active_idx(start_idx):
+    """Find the next non-bankrupt player index"""
     players = st.session_state.get('players', [])
     n = len(players)
     if n == 0: return None
@@ -173,6 +188,7 @@ def next_active_idx(start_idx):
     return None
 
 def check_game_end():
+    """Check if only one active player remains"""
     players = st.session_state.get('players', [])
     active = [p for p in players if not st.session_state.bankrupt.get(p, False)]
     if len(active) <= 1 and st.session_state.initialized:
@@ -181,105 +197,18 @@ def check_game_end():
         return True
     return False
 
-def process_landing(player, roll_value, depth=0):
-    if depth > 4: return " (stopped recursive card moves)"
-    ss = st.session_state
-    pos = ss['position'][player]
-    space = BOARD[pos]
-    name, typ = space[0], space[1]
-    messages = []
-
-    # Tax
-    if typ == "tax":
-        tax = space[2]
-        ss['cash'][player] -= tax
-        ss['free_parking_pot'] += tax
-        messages.append(f"Paid **{tax}g {name}** → added to Free Parking pot!")
-    # Free Parking
-    elif typ == "free":
-        if ss['free_parking_pot'] > 0:
-            amt = ss['free_parking_pot']
-            ss['cash'][player] += amt
-            ss['free_parking_pot'] = 0
-            messages.append(f"FREE PARKING JACKPOT! Collected **{amt}g**")
-        else:
-            messages.append("Free Parking — no pot yet!")
-    # Go to jail
-    elif typ == "go2jail":
-        ss['position'][player] = 6
-        ss['in_jail'][player] = True
-        ss['jail_turns'][player] = 0
-        messages.append("GO TO JAIL!")
-        return " ".join(messages)
-    # Owned property rent
-    elif typ in ("prop","rail","util") and ss['properties'].get(pos) and ss['properties'].get(pos) != player:
-        landlord = ss['properties'][pos]
-        if typ == "prop":
-            rent = space[3]
-        elif typ == "rail":
-            rails_owned = sum(1 for i,o in ss['properties'].items() if o == landlord and BOARD[i][1]=="rail")
-            rent = 40 * (2 ** (rails_owned-1)) if rails_owned>=1 else 40
-        else:  # util
-            utils_owned = sum(1 for i,o in ss['properties'].items() if o == landlord and BOARD[i][1]=="util")
-            rent = roll_value * (4 if utils_owned==1 else 10)
-        ss['cash'][player] -= rent
-        ss['cash'][landlord] += rent
-        messages.append(f"Paid **{landlord}** {rent}g rent on **{name}**!")
-    # Chest / Chance cards
-    elif typ == "chest":
-        text, action = random.choice(CHEST_CARDS_LIST)
-        action(player, ss, roll_value)
-        messages.append(f"Chappa Chest → {text}")
-        messages.append(process_landing(player, roll_value, depth+1))
-    elif typ == "chance":
-        text, action = random.choice(CHANCE_CARDS_LIST)
-        action(player, ss, roll_value)
-        messages.append(f"Chapaa Chance → {text}")
-        messages.append(process_landing(player, roll_value, depth+1))
-
-    return " ".join([m for m in messages if m])
-
 # ======================
-# HELPER: add cash / move player
-# ======================
-def add_cash(player, amt):
-    ss = st.session_state
-    ss['cash'][player] = ss['cash'].get(player,0) + amt
-
-def move_player(player, new_pos):
-    ss = st.session_state
-    ss['position'][player] = new_pos
-
-# ======================
-# MAIN GAME LOOP
+# MAIN TURN SETUP
 # ======================
 if st.session_state.initialized:
     ss = st.session_state
-    players = ss.get('players', [])
-    cur_idx = ss.get('current_idx', 0)
-    cur_idx = cur_idx % len(players) if players else 0
+    players = ss['players']
+    cur_idx = ss['current_idx'] % len(players)
     ss['current_idx'] = cur_idx
-    cur = players[cur_idx] if players else None
-
-    cash = ss.get('cash', {})
-    pos = ss.get('position', {})
-    owner = ss.get('properties', {})
-    jail = ss.get('in_jail', {})
-    pot = ss.get('free_parking_pot', 0)
-
-    # Header: players
-    with st.expander("Players and status", expanded=False):
-        cols = st.columns(len(players) if players else 1)
-        for i, pl in enumerate(players):
-            label = f"{pl} — {cash.get(pl,0)}g"
-            if ss['bankrupt'].get(pl, False):
-                cols[i].markdown(f"✅ **{pl}** — BANKRUPT")
-            else:
-                jail_tag = " — JAILED" if jail.get(pl, False) else ""
-                cols[i].markdown(f"**{pl}** — {cash.get(pl,0)}g{jail_tag}")
+    cur = players[cur_idx]
 
     # Skip bankrupt
-    if cur and ss['bankrupt'].get(cur, False):
+    if ss['bankrupt'].get(cur, False):
         nxt = next_active_idx(cur_idx)
         if nxt is None:
             check_game_end()
@@ -287,57 +216,28 @@ if st.session_state.initialized:
             ss['current_idx'] = nxt
             st.experimental_rerun()
 
-    # Show main turn info
-    if cur:
-        col1, col2, col3, col4, col5 = st.columns([2,2,2,2.5,2.5])
-        with col1:
-            status = " — JAILED" if jail.get(cur, False) else ""
-            bankrupt_label = " — BANKRUPT" if ss['bankrupt'].get(cur, False) else ""
-            st.markdown(f"**Turn: {cur}**{status}{bankrupt_label}")
-        with col2:
-            st.markdown(f"**Gold: {cash.get(cur,0)}g**")
-        with col3:
-            st.markdown(f"**Pot: {pot}g**")
-        with col4:
-            if ss['rolled']:
-                st.success(f"Started on: **{ss['starting_square']}**")
-            else:
-                st.info(f"Starting on: **{BOARD[pos.get(cur,0)][0]}**")
-        with col5:
-            if ss['rolled']:
-                if ss.get('confirm_next_for') == cur:
-                    st.warning("Confirm move to next player?")
-                    yes, no = st.columns(2)
-                    if yes.button("Confirm Next", key=f"confirm_next_yes_{cur}"):
-                        nxt = next_active_idx(cur_idx)
-                        ss['rolled'] = False
-                        ss['landed'] = None
-                        ss['starting_square'] = ""
-                        ss['trade_mode'] = False
-                        ss['last_message'] = ""
-                        ss['confirm_next_for'] = None
-                        ss['doubles_streak'] = 0
-                        if nxt is None: check_game_end()
-                        else: ss['current_idx'] = nxt
-                        st.experimental_rerun()
-                    if no.button("Cancel", key=f"confirm_next_no_{cur}"):
-                        ss['confirm_next_for'] = None
-                        st.experimental_rerun()
-                else:
-                    if st.button("Next Player (Confirm)", use_container_width=True):
-                        ss['confirm_next_for'] = cur
-                        st.experimental_rerun()
-            else:
-                st.button("Next Player", disabled=True, use_container_width=True)
-                st.caption("Roll first!")
+    # ======================
+    # Display Player Info
+    # ======================
+    with st.expander("Players and status", expanded=False):
+        cols = st.columns(len(players))
+        for i, pl in enumerate(players):
+            status_text = ""
+            if ss['bankrupt'].get(pl, False):
+                status_text = " — BANKRUPT"
+            elif ss['in_jail'].get(pl, False):
+                status_text = " — JAILED"
+            cols[i].markdown(f"**{pl}** — {ss['cash'][pl]}g{status_text}")
 
-    if ss['last_message']:
-        st.success(ss['last_message'])
+if st.session_state.initialized:
+    ss = st.session_state
+    cur = ss['players'][ss['current_idx']]
+    if ss['bankrupt'].get(cur, False):
+        st.stop()
 
-# ======================
-# ROLL DICE
-# ======================
-if cur and not ss['bankrupt'].get(cur, False):
+    # ----------------------
+    # DICE ROLL INPUT
+    # ----------------------
     if not ss['rolled']:
         st.info("Enter your **real dice roll**")
         roll = st.number_input("Total rolled", 2, 12, 7, step=1, key="roll_input")
@@ -361,73 +261,109 @@ if cur and not ss['bankrupt'].get(cur, False):
                         ss['last_message'] = f"{cur} did not roll doubles (Jail turn {ss['jail_turns'][cur]}/3)."
                         ss['rolled'] = True
                         ss['starting_square'] = BOARD[ss['position'][cur]][0]
-                        ss['doubles_streak'] = 0
                         st.experimental_rerun()
 
-            # Doubles streak
+            # Handle doubles streak
             if doubles:
                 ss['doubles_streak'] += 1
                 if ss['doubles_streak'] >= 3:
-                    ss['position'][cur] = 6
+                    ss['position'][cur] = 6  # Jail
                     ss['in_jail'][cur] = True
                     ss['jail_turns'][cur] = 0
                     ss['rolled'] = True
-                    ss['starting_square'] = BOARD[pos.get(cur,0)][0]
+                    ss['starting_square'] = BOARD[ss['position'][cur]][0]
                     ss['landed'] = 6
                     ss['last_message'] = "3 DOUBLES → JAIL!"
                     st.experimental_rerun()
             else:
                 ss['doubles_streak'] = 0
 
-            # Perform move if not jailed
+            # Move player if not jailed
             if not ss['in_jail'].get(cur, False):
-                old_pos = ss['position'].get(cur, 0)
+                old_pos = ss['position'][cur]
                 new_pos = (old_pos + roll) % len(BOARD)
+
+                # GO collection
                 if old_pos + roll >= len(BOARD) or new_pos == 0:
-                    add_cash(cur, 300)
+                    ss['cash'][cur] += 300
                     st.balloons()
                     go_msg = " Passed or landed GO → collected 300g!"
                 else:
                     go_msg = ""
-                move_player(cur, new_pos)
+
+                # Update position
+                ss['position'][cur] = new_pos
                 ss['landed'] = new_pos
                 ss['rolled'] = True
                 ss['starting_square'] = BOARD[old_pos][0]
+
+                # Process landing
                 landing_msg = process_landing(cur, roll)
-                msg = f"Landed on **{BOARD[new_pos][0]}**. {go_msg} {landing_msg}"
-                ss['last_message'] = msg
-                if doubles and not ss['in_jail'].get(cur,False):
+
+                # ----------------------
+                # Easter eggs: Chilled Dude / lilshrtchit / double 1
+                # ----------------------
+                easter_msg = []
+                player_here = [p for p, pos in ss['position'].items() if pos == new_pos and p != cur]
+                for p in player_here:
+                    p_key = p.lower()
+                    if p_key in ["chilled dude", "lilshrtchit"]:
+                        claimed = ss['easter_eggs_claimed'][cur].get(p_key, False)
+                        if not claimed:
+                            bonus = 10
+                            ss['cash'][cur] += bonus
+                            ss['easter_eggs_claimed'][cur][p_key] = True
+                            if p_key == "chilled dude":
+                                easter_msg.append(f"Landed on **Chilled Dude** → collected {bonus}g! Hang out with Chilled Dude!")
+                            else:
+                                # Subscription button
+                                subscribed = st.button(f"Yes, I'm subscribed to {p}", key=f"sub_{cur}_{p}")
+                                if subscribed:
+                                    easter_msg.append(f"Landed on **{p}** → subscribed bonus {bonus}g collected!")
+                                    ss['cash'][cur] += bonus
+
+                # Double 1 Easter egg
+                if roll == 2 and doubles:
+                    easter_msg.append("Rolled double 1 → Remember to hydrate!")
+
+                ss['last_message'] = f"Landed on **{BOARD[new_pos][0]}**. {go_msg} {landing_msg} {' '.join(easter_msg)}"
+
+                # Extra turn for doubles
+                if doubles and not ss['in_jail'].get(cur, False):
                     ss['rolled'] = False
                     ss['last_message'] += " — Doubles! Take another turn."
-                else:
-                    ss['rolled'] = True
+
             st.experimental_rerun()
 
 # ======================
-# BUY PROPERTY
+# BUY PROPERTY IF UNOWNED
 # ======================
-if cur and ss['rolled']:
-    landed_idx = ss.get('landed')
-    if landed_idx is not None:
-        landed_square = BOARD[landed_idx]
-        if landed_square[1] in ("prop","rail","util") and ss['properties'].get(landed_idx) is None:
-            price = landed_square[2]
-            if st.button(f"Buy {landed_square[0]} for {price}g?"):
-                if ss['cash'].get(cur,0) >= price:
-                    ss['cash'][cur] -= price
-                    ss['properties'][landed_idx] = cur
-                    ss['last_message'] = f"{cur} bought {landed_square[0]}!"
-                    st.experimental_rerun()
-                else:
-                    st.error("Not enough gold!")
+if ss['rolled'] and ss['landed'] is not None:
+    landed_idx = ss['landed']
+    landed_square = BOARD[landed_idx]
+    typ = landed_square[1]
+    if typ in ("prop", "rail", "util") and ss['properties'].get(landed_idx) is None:
+        price = landed_square[2]
+        if st.button(f"Buy {landed_square[0]} for {price}g?"):
+            if ss['cash'].get(cur, 0) >= price:
+                ss['cash'][cur] -= price
+                ss['properties'][landed_idx] = cur
+                ss['last_message'] = f"{cur} bought {landed_square[0]}!"
+                st.experimental_rerun()
+            else:
+                st.error("Not enough gold!")
 
 # ======================
-# SELL TO BANK
+# PART 4 — SELL TO BANK, TRADE, BANKRUPT, BOARD OWNERSHIP, NEW GAME
 # ======================
+
+# ----------------------
+# SELL TO BANK
+# ----------------------
 if cur and not ss['bankrupt'].get(cur, False):
     st.markdown("---")
     st.markdown("### Sell to Bank (50% value)")
-    player_props = [i for i,o in owner.items() if o == cur]
+    player_props = [i for i,o in ss['properties'].items() if o == cur]
     if player_props:
         for idx in player_props:
             prop = BOARD[idx]
@@ -444,9 +380,9 @@ if cur and not ss['bankrupt'].get(cur, False):
     else:
         st.write("No properties to sell to the bank.")
 
-# ======================
+# ----------------------
 # BANKRUPT / QUIT
-# ======================
+# ----------------------
 if cur and not ss['bankrupt'].get(cur, False):
     st.markdown("---")
     if st.button("Bankrupt / Quit (return assets to bank)"):
@@ -465,7 +401,7 @@ if ss.get('confirm_bankrupt_for') == cur:
         ss['bankrupt'][cur] = True
         ss['confirm_bankrupt_for'] = None
         ss['last_message'] = f"**{cur}** declared BANKRUPT — assets returned to bank."
-        nxt = next_active_idx(cur_idx)
+        nxt = next_active_idx(ss['current_idx'])
         if nxt is None: check_game_end()
         else: ss['current_idx'] = nxt
         st.experimental_rerun()
@@ -473,9 +409,9 @@ if ss.get('confirm_bankrupt_for') == cur:
         ss['confirm_bankrupt_for'] = None
         st.experimental_rerun()
 
-# ======================
+# ----------------------
 # TRADE SYSTEM
-# ======================
+# ----------------------
 if cur and not ss['bankrupt'].get(cur, False):
     if st.button("Trade / Deal" if not ss['trade_mode'] else "Cancel Trade"):
         ss['trade_mode'] = not ss['trade_mode']
@@ -483,7 +419,7 @@ if cur and not ss['bankrupt'].get(cur, False):
 
     if ss['trade_mode']:
         st.subheader("Trade / Deal Maker")
-        others = [pl for pl in players if pl != cur and not ss['bankrupt'].get(pl, False)]
+        others = [pl for pl in ss['players'] if pl != cur and not ss['bankrupt'].get(pl, False)]
         if not others:
             st.write("No trading partners available.")
         else:
@@ -491,13 +427,13 @@ if cur and not ss['bankrupt'].get(cur, False):
             st.markdown("---")
             st.markdown("### Your offer")
             offer_gold = st.number_input(f"{cur} gives gold:", min_value=0, max_value=ss['cash'].get(cur,0), step=10, key="offer_gold")
-            your_props = [i for i,o in owner.items() if o == cur]
+            your_props = [i for i,o in ss['properties'].items() if o == cur]
             offer_props = st.multiselect("Properties to trade:", your_props, format_func=lambda i: BOARD[i][0], key="offer_props")
             offer_jail_card = (ss.get('jail_free_card') == cur) and st.checkbox("Give Get Out of Jail Free card", key="offer_jail")
 
             st.markdown("### Partner offer")
             partner_gold = st.number_input(f"{partner} gives gold:", min_value=0, max_value=ss['cash'].get(partner,0), step=10, key="partner_gold")
-            partner_props = [i for i,o in owner.items() if o == partner]
+            partner_props = [i for i,o in ss['properties'].items() if o == partner]
             partner_offer_props = st.multiselect("Properties to receive:", partner_props, format_func=lambda i: BOARD[i][0], key="partner_props")
             partner_jail_card = (ss.get('jail_free_card') == partner) and st.checkbox("Receive their Get Out of Jail Free card", key="partner_jail")
 
@@ -524,9 +460,9 @@ if cur and not ss['bankrupt'].get(cur, False):
                     ss['last_message'] = f"Trade completed between **{cur}** and **{partner}**!"
                     st.experimental_rerun()
 
-# ======================
-# Board Ownership Overview (TRADEABLE ONLY)
-# ======================
+# ----------------------
+# BOARD OWNERSHIP OVERVIEW (TRADEABLE ONLY, GROUPED)
+# ----------------------
 st.markdown("---")
 with st.expander("Board ownership (tradeable only)", expanded=True):
     sections = {
@@ -547,16 +483,16 @@ with st.expander("Board ownership (tradeable only)", expanded=True):
             owner_name = ss['properties'].get(idx) or "Bank"
             st.write(f"{BOARD[idx][0]} — {owner_name}")
 
-# ======================
-# NEW GAME
-# ======================
+# ----------------------
+# NEW GAME RESET
+# ----------------------
 st.markdown("---")
 if st.button("New Game (Reset Everything)"):
     for key in list(st.session_state.keys()):
         del st.session_state[key]
     st.experimental_rerun()
 
-# ======================
-# Check game end after all actions
-# ======================
+# ----------------------
+# FINAL CHECK: GAME END
+# ----------------------
 check_game_end()
