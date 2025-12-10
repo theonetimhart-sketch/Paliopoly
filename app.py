@@ -131,8 +131,9 @@ init_game_state()
 for p in st.session_state.get('players', []):
     if p not in st.session_state['easter_eggs_claimed']:
         st.session_state['easter_eggs_claimed'][p] = {
-            "Chilled Dude": False,
+            "chilled dude": False,
             "lilshrtchit": False
+        }
 
 # ======================
 # START GAME UI
