@@ -5,8 +5,8 @@ import random
 # PAGE SETUP
 # ======================
 st.set_page_config(page_title="Paliopoly – Chilled Dude Edition", layout="centered")
-st.title("Paliopoly – Chilled Dude Edition — FINAL FIXED")
-st.markdown("**All your bugs crushed. Jail, doubles, GO money, cards, confirm turn, bankrupt skip — everything works.**")
+st.title("Paliopoly – Chilled Dude Edition — FULLY RESTORED")
+st.markdown("**All fixes + FULL TRADING SYSTEM BACK**")
 
 # ======================
 # SPLASH SCREEN
@@ -69,16 +69,10 @@ BOARD = [
 ]
 
 # ======================
-# CARDS — FIXED & CLEAN
+# CARDS — FIXED & WORKING
 # ======================
-def chest_go_to_go(p, ss, _):
-    ss['position'][p] = 0
-    ss['cash'][p] += 300
-
-def chest_go_to_jail(p, ss, _):
-    ss['position'][p] = 6
-    ss['in_jail'][p] = True
-    ss['jail_turns'][p] = 0
+def chest_go_to_go(p, ss, _): ss['position'][p] = 0; ss['cash'][p] += 300
+def chest_go_to_jail(p, ss, _): ss['position'][p] = 6; ss['in_jail'][p] = True; ss['jail_turns'][p] = 0
 
 CHEST_CARDS_LIST = [
     ("Chapaa Chase to GO!", chest_go_to_go),
@@ -99,8 +93,7 @@ CHEST_CARDS_LIST = [
 def chance_free_parking(p, ss, _):
     old = ss['position'][p]
     ss['position'][p] = 12
-    if ss['position'][p] < old:
-        ss['cash'][p] += 300
+    if ss['position'][p] < old: ss['cash'][p] += 300
     ss['cash'][p] += ss['free_parking_pot']
     ss['free_parking_pot'] = 0
 
@@ -122,7 +115,7 @@ CHANCE_CARDS_LIST = [
 ]
 
 # ======================
-# INITIALIZE GAME (only once after splash)
+# INITIALIZE GAME
 # ======================
 if 'initialized' not in st.session_state:
     st.session_state.update({
@@ -164,11 +157,9 @@ with st.expander("Players & Cash", expanded=True):
     for i, p in enumerate(ss.players):
         jail = " (JAILED)" if ss.in_jail.get(p) else ""
         bank = " (BANKRUPT)" if ss.bankrupt.get(p) else ""
-        cols[i].markdown(f"**{p}**{jail}{bank}\n{ss.cash[p]}g")
+        at = f"at {BOARD[ss.position[p]][0]}"
+        cols[i].markdown(f"**{p}**{jail}{bank}\n{ss.cash[p]}g\n{at}")
 
-# ======================
-# Turn header
-# ======================
 c1, c2, c3, c4 = st.columns([2, 2, 2, 3])
 c1.markdown(f"**Turn: {cur}** {'(JAILED)' if ss.in_jail.get(cur) else ''}")
 c2.markdown(f"**Gold:** {ss.cash[cur]}g")
@@ -201,7 +192,10 @@ if ss.in_jail.get(cur):
 if not ss.rolled:
     st.info("Enter your real dice roll")
     roll = st.number_input("Total rolled", 2, 12, 7, step=1)
-    doubles = st.checkbox("Doubles?")
+    if roll % 2 == 0:
+        doubles = st.checkbox("Doubles?")
+    else:
+        doubles = False
 
     if st.button("Confirm Roll", type="primary"):
         # Jail logic
@@ -234,6 +228,7 @@ if not ss.rolled:
                 ss.jail_turns[cur] = 0
                 ss.last_message = "3 DOUBLES → JAIL!"
                 ss.rolled = True
+                ss.landed = None  # No landing process for the would-be position
                 st.rerun()
         else:
             ss.doubles_streak = 0
@@ -251,7 +246,6 @@ if not ss.rolled:
             ss.starting_square = BOARD[old_pos][0]
             ss.rolled = True
 
-            # Process landing (recursive for cards)
             def process(pos, depth=0):
                 if depth > 6: return " [card loop stopped]"
                 sq = BOARD[pos]
@@ -276,20 +270,14 @@ if not ss.rolled:
                     return " ".join(msg)
                 elif typ in ("prop","rail","util") and ss.properties.get(pos) and ss.properties[pos] != cur:
                     owner = ss.properties[pos]
-                    if typ == "prop":
-                        rent = sq[3]
-                    elif typ == "rail":
-                        owned = sum(1 for i,o in ss.properties.items() if o==owner and BOARD[i][1]=="rail")
-                        rent = 40 * (2 ** (owned-1))
-                    else:
-                        owned = sum(1 for i,o in ss.properties.items() if o==owner and BOARD[i][1]=="util")
-                        rent = roll * (10 if owned == 2 else 4)
+                    if typ == "prop": rent = sq[3]
+                    elif typ == "rail": rent = 40 * (2 ** (sum(1 for i,o in ss.properties.items() if o==owner and BOARD[i][1]=="rail")-1))
+                    else: rent = roll * (10 if sum(1 for i,o in ss.properties.items() if o==owner and BOARD[i][1]=="util")==2 else 4)
                     ss.cash[cur] -= rent
                     ss.cash[owner] += rent
                     msg.append(f"Paid {owner} {rent}g rent")
                 elif typ == "chest":
-                    if not ss.chest_deck:
-                        ss.chest_deck = random.sample(CHEST_CARDS_LIST, len(CHEST_CARDS_LIST))
+                    if not ss.chest_deck: ss.chest_deck = random.sample(CHEST_CARDS_LIST, len(CHEST_CARDS_LIST))
                     card = ss.chest_deck.pop(0)
                     ss.chest_deck.append(card)
                     old = ss.position[cur]
@@ -298,8 +286,7 @@ if not ss.rolled:
                     if ss.position[cur] != old:
                         msg.append(process(ss.position[cur], depth+1))
                 elif typ == "chance":
-                    if not ss.chance_deck:
-                        ss.chance_deck = random.sample(CHANCE_CARDS_LIST, len(CHANCE_CARDS_LIST))
+                    if not ss.chance_deck: ss.chance_deck = random.sample(CHANCE_CARDS_LIST, len(CHANCE_CARDS_LIST))
                     card = ss.chance_deck.pop(0)
                     ss.chance_deck.append(card)
                     old = ss.position[cur]
@@ -349,12 +336,58 @@ if ss.rolled:
             ss.confirm_next_for = cur
             st.rerun()
 
+# ======================
+# FULL TRADING SYSTEM — RESTORED!
+# ======================
+if st.button("Trade / Deal" if not ss.trade_mode else "Cancel Trade"):
+    ss.trade_mode = not ss.trade_mode
+    st.rerun()
+
+if ss.trade_mode:
+    st.subheader("Trade / Deal Maker")
+    others = [p for p in ss.players if p != cur and not ss.bankrupt.get(p, False)]
+    if not others:
+        st.write("No active players to trade with.")
+    else:
+        partner = st.selectbox("Choose trading partner:", others)
+        st.markdown("---")
+        st.markdown("### Your Offer")
+        offer_gold = st.number_input(f"{cur} gives gold:", min_value=0, max_value=ss.cash[cur], step=10)
+        your_props = [i for i,o in ss.properties.items() if o == cur]
+        offer_props = st.multiselect("Properties you give:", your_props, format_func=lambda i: BOARD[i][0])
+        offer_jail = (ss.jail_free_card == cur) and st.checkbox("Give Get Out of Jail Free card")
+
+        st.markdown("### Their Offer")
+        their_gold = st.number_input(f"{partner} gives gold:", min_value=0, max_value=ss.cash[partner], step=10)
+        their_props = [i for i,o in ss.properties.items() if o == partner]
+        their_offer_props = st.multiselect("Properties you receive:", their_props, format_func=lambda i: BOARD[i][0])
+        their_jail = (ss.jail_free_card == partner) and st.checkbox("Receive their Get Out of Jail Free card")
+
+        if st.button("Confirm Trade", type="primary"):
+            # Transfer cash
+            ss.cash[cur] -= offer_gold
+            ss.cash[partner] += offer_gold
+            ss.cash[partner] -= their_gold
+            ss.cash[cur] += their_gold
+            # Transfer properties
+            for i in offer_props: ss.properties[i] = partner
+            for i in their_offer_props: ss.properties[i] = cur
+            # Transfer jail card
+            if offer_jail: ss.jail_free_card = partner
+            elif their_jail: ss.jail_free_card = cur
+            st.success(f"Trade complete between {cur} and {partner}!")
+            ss.trade_mode = False
+            ss.last_message = f"Trade completed!"
+            st.rerun()
+
 # Ownership
 with st.expander("Ownership Overview", expanded=True):
     for i, sq in enumerate(BOARD):
         if sq[1] in ("prop", "rail", "util"):
             owner = ss.properties.get(i) or "Bank"
             st.write(f"{i:2d}: **{sq[0]}** — {owner}")
+    jail_owner = ss.jail_free_card or "Unowned"
+    st.write(f"Get Out of Jail Free — {jail_owner}")
 
 # New Game
 if st.button("New Game — Reset Everything"):
