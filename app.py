@@ -51,7 +51,7 @@ if not st.session_state.passed_splash:
 # MAIN IMAGES
 # ======================
 st.image("https://raw.githubusercontent.com/theonetimhart-sketch/Paliopoly/refs/heads/main/image.png", use_column_width=True)
-st.image("https://github.com/theonetimhart-sketch/Paliopoly/blob/main/paliopoly.png", use_column_width=True, caption="The Board")
+st.image("https://raw.githubusercontent.com/theonetimhart-sketch/Paliopoly/refs/heads/main/paliopoly.png", use_column_width=True, caption="The Board")
 
 # ======================
 # BOARD WITH COLOR GROUPS
