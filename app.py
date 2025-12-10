@@ -6,10 +6,10 @@ import random
 # ======================
 st.set_page_config(page_title="Paliopoly – Chilled Dude Edition", layout="centered")
 st.title("Paliopoly – Chilled Dude Edition — FINAL & COMPLETE")
-st.markdown("**Cards now fully land on destination: buy/rent/tax/free parking all work**")
+st.markdown("**Full set ×2 rent | Clean grouped ownership | Card moves fully land | Trading | Jail | Everything works**")
 
 # ======================
-# SPLASH SCREEN — PASSWORD FIXED
+# SPLASH SCREEN
 # ======================
 SPLASH_IMAGE = "https://raw.githubusercontent.com/theonetimhart-sketch/Paliopoly/main/image3.PNG"
 if 'passed_splash' not in st.session_state:
@@ -31,7 +31,7 @@ if not st.session_state.passed_splash:
 
     if "Chilled Dude" in players:
         st.success("And Chilled Dude is playing, yay!")
-        if st.button("Continue → Let's Play!"):
+        if st.button("Continue to Let's Play!"):
             st.session_state.players = players
             st.session_state.passed_splash = True
             st.rerun()
@@ -54,22 +54,45 @@ st.image("https://raw.githubusercontent.com/theonetimhart-sketch/Paliopoly/refs/
 st.image("https://raw.githubusercontent.com/theonetimhart-sketch/Paliopoly/refs/heads/main/image2.png", use_column_width=True, caption="The Board")
 
 # ======================
-# BOARD
+# BOARD WITH COLOR GROUPS
 # ======================
 BOARD = [
     ("GO", "go"),
-    ("Kilima 1", "prop", 80, 6, 18), ("Renown Tax", "tax", 100), ("Kilima 2", "prop", 80, 6, 18),
-    ("Travel Point 1", "rail", 150, 40), ("Chappa Chest", "chest"), ("Jail", "jail"),
-    ("Bahari 1", "prop", 120, 9, 27), ("Chapaa Chance", "chance"), ("Travel Point 2", "rail", 150, 40),
-    ("Bahari 2", "prop", 120, 9, 27), ("Utility 1", "util", 100), ("Free Parking", "free"),
-    ("Elderwood 1", "prop", 160, 12, 36), ("Chapaa Chance", "chance"), ("Elderwood 2", "prop", 160, 12, 36),
-    ("Travel Point 3", "rail", 150, 40), ("Utility 2", "util", 100), ("Go to Jail", "go2jail"),
-    ("Chappa Chest", "chest"), ("Travel Point 4", "rail", 150, 40),
-    ("Maji Wedding 1", "prop", 200, 15, 45), ("Maji Tax", "tax", 200), ("Maji Wedding 2", "prop", 200, 15, 45)
+    ("Kilima 1", "prop", 80, 6, 18, "purple"),
+    ("Renown Tax", "tax", 100),
+    ("Kilima 2", "prop", 80, 6, 18, "purple"),
+    ("Travel Point 1", "rail", 150, 40),
+    ("Chappa Chest", "chest"),
+    ("Jail", "jail"),
+    ("Bahari 1", "prop", 120, 9, 27, "lightblue"),
+    ("Chapaa Chance", "chance"),
+    ("Travel Point 2", "rail", 150, 40),
+    ("Bahari 2", "prop", 120, 9, 27, "lightblue"),
+    ("Utility 1", "util", 100),
+    ("Free Parking", "free"),
+    ("Elderwood 1", "prop", 160, 12, 36, "orange"),
+    ("Chapaa Chance", "chance"),
+    ("Elderwood 2", "prop", 160, 12, 36, "orange"),
+    ("Travel Point 3", "rail", 150, 40),
+    ("Utility 2", "util", 100),
+    ("Go to Jail", "go2jail"),
+    ("Chappa Chest", "chest"),
+    ("Travel Point 4", "rail", 150, 40),
+    ("Maji Wedding 1", "prop", 200, 15, 45, "red"),
+    ("Maji Tax", "tax", 200),
+    ("Maji Wedding 2", "prop", 200, 15, 45, "red")
 ]
 
+# Color groups for full set rent ×2
+COLOR_GROUPS = {
+    "purple": [1, 3],
+    "lightblue": [7, 10],
+    "orange": [13, 15],
+    "red": [21, 23]
+}
+
 # ======================
-# CARDS
+# FULL CHEST CARDS — RESTORED
 # ======================
 def chest_go_to_go(p, ss, _): ss['position'][p] = 0; ss['cash'][p] += 300
 def chest_go_to_jail(p, ss, _): ss['position'][p] = 6; ss['in_jail'][p] = True; ss['jail_turns'][p] = 0
@@ -90,6 +113,9 @@ CHEST_CARDS_LIST = [
     ("Zeki drops off some treasure. collect 200g", lambda p,ss,_: ss['cash'].__setitem__(p, ss['cash'][p]+200))
 ]
 
+# ======================
+# FULL CHANCE CARDS — RESTORED
+# ======================
 def chance_free_parking(p, ss, _):
     old = ss['position'][p]
     ss['position'][p] = 12
@@ -175,15 +201,9 @@ if ss.last_message:
 if ss.in_jail.get(cur):
     col_pay, col_card = st.columns(2)
     if col_pay.button("Pay 50g to leave jail") and ss.cash[cur] >= 50:
-        ss.cash[cur] -= 50
-        ss.free_parking_pot += 50
-        ss.in_jail[cur] = False
-        ss.jail_turns[cur] = 0
-        st.rerun()
+        ss.cash[cur] -= 50; ss.free_parking_pot += 50; ss.in_jail[cur] = False; ss.jail_turns[cur] = 0; st.rerun()
     if col_card.button("Use Get Out of Jail Free") and ss.jail_free_card == cur:
-        ss.jail_free_card = None
-        ss.in_jail[cur] = False
-        st.rerun()
+        ss.jail_free_card = None; ss.in_jail[cur] = False; st.rerun()
 
 # ======================
 # Roll dice
@@ -205,9 +225,7 @@ if not ss.rolled:
                 ss.jail_turns[cur] += 1
                 if ss.jail_turns[cur] >= 3:
                     if ss.cash[cur] >= 50:
-                        ss.cash[cur] -= 50
-                        ss.free_parking_pot += 50
-                        ss.in_jail[cur] = False
+                        ss.cash[cur] -= 50; ss.free_parking_pot += 50; ss.in_jail[cur] = False
                     else:
                         ss.last_message = "Can't pay 50g — stuck in jail!"
                         ss.rolled = True
@@ -220,12 +238,9 @@ if not ss.rolled:
         if doubles:
             ss.doubles_streak += 1
             if ss.doubles_streak >= 3:
-                ss.position[cur] = 6
-                ss.in_jail[cur] = True
-                ss.jail_turns[cur] = 0
-                ss.last_message = "3 DOUBLES → JAIL!"
-                ss.rolled = True
-                ss.landed = None
+                ss.position[cur] = 6; ss.in_jail[cur] = True; ss.jail_turns[cur] = 0
+                ss.last_message = "3 DOUBLES to JAIL!"
+                ss.rolled = True; ss.landed = None
                 st.rerun()
         else:
             ss.doubles_streak = 0
@@ -243,7 +258,6 @@ if not ss.rolled:
             ss.starting_square = BOARD[old_pos][0]
             ss.rolled = True
 
-            # Full landing processor — used by normal roll AND card moves
             def land_on(pos, depth=0):
                 if depth > 6: return " [card loop stopped]"
                 sq = BOARD[pos]
@@ -251,49 +265,41 @@ if not ss.rolled:
                 typ = sq[1]
 
                 if typ == "tax":
-                    amt = sq[2]
-                    ss.cash[cur] -= amt
-                    ss.free_parking_pot += amt
-                    msg.append(f"Paid {amt}g tax")
+                    amt = sq[2]; ss.cash[cur] -= amt; ss.free_parking_pot += amt; msg.append(f"Paid {amt}g tax")
                 elif typ == "free":
                     if ss.free_parking_pot:
-                        amt = ss.free_parking_pot
-                        ss.cash[cur] += amt
-                        ss.free_parking_pot = 0
-                        msg.append(f"Jackpot! +{amt}g")
+                        amt = ss.free_parking_pot; ss.cash[cur] += amt; ss.free_parking_pot = 0; msg.append(f"Jackpot! +{amt}g")
                 elif typ == "go2jail":
-                    ss.position[cur] = 6
-                    ss.in_jail[cur] = True
-                    ss.jail_turns[cur] = 0
-                    msg.append("Go to jail!")
-                    return " ".join(msg)
+                    ss.position[cur] = 6; ss.in_jail[cur] = True; ss.jail_turns[cur] = 0; msg.append("Go to jail!"); return " ".join(msg)
                 elif typ in ("prop","rail","util"):
                     owner = ss.properties.get(pos)
                     if owner and owner != cur:
-                        if typ == "prop": rent = sq[3]
-                        elif typ == "rail": rent = 40 * (2 ** (sum(1 for i,o in ss.properties.items() if o==owner and BOARD[i][1]=="rail")-1))
-                        else: rent = roll * (10 if sum(1 for i,o in ss.properties.items() if o==owner and BOARD[i][1]=="util")==2 else 4)
-                        ss.cash[cur] -= rent
-                        ss.cash[owner] += rent
-                        msg.append(f"Paid {owner} {rent}g rent")
+                        if typ == "prop":
+                            base_rent = sq[3]
+                            color = sq[5]
+                            full_set = all(ss.properties.get(i) == owner for i in COLOR_GROUPS[color])
+                            rent = base_rent * 2 if full_set else base_rent
+                        elif typ == "rail":
+                            owned = sum(1 for i,o in ss.properties.items() if o==owner and BOARD[i][1]=="rail")
+                            rent = 40 * (2 ** (owned-1))
+                        else:
+                            owned = sum(1 for i,o in ss.properties.items() if o==owner and BOARD[i][1]=="util")
+                            rent = roll * (10 if owned == 2 else 4)
+                        ss.cash[cur] -= rent; ss.cash[owner] += rent
+                        extra = " (full set!)" if typ == "prop" and full_set else ""
+                        msg.append(f"Paid {owner} {rent}g rent{extra}")
                 elif typ == "chest":
                     if not ss.chest_deck: ss.chest_deck = random.sample(CHEST_CARDS_LIST, len(CHEST_CARDS_LIST))
-                    card = ss.chest_deck.pop(0)
-                    ss.chest_deck.append(card)
-                    old = ss.position[cur]
-                    card[1](cur, ss, roll)
+                    card = ss.chest_deck.pop(0); ss.chest_deck.append(card)
+                    old = ss.position[cur]; card[1](cur, ss, roll)
                     msg.append(f"Chest: {card[0]}")
-                    if ss.position[cur] != old:
-                        msg.append(land_on(ss.position[cur], depth+1))
+                    if ss.position[cur] != old: msg.append(land_on(ss.position[cur], depth+1))
                 elif typ == "chance":
                     if not ss.chance_deck: ss.chance_deck = random.sample(CHANCE_CARDS_LIST, len(CHANCE_CARDS_LIST))
-                    card = ss.chance_deck.pop(0)
-                    ss.chance_deck.append(card)
-                    old = ss.position[cur]
-                    card[1](cur, ss, roll)
+                    card = ss.chance_deck.pop(0); ss.chance_deck.append(card)
+                    old = ss.position[cur]; card[1](cur, ss, roll)
                     msg.append(f"Chance: {card[0]}")
-                    if ss.position[cur] != old:
-                        msg.append(land_on(ss.position[cur], depth+1))
+                    if ss.position[cur] != old: msg.append(land_on(ss.position[cur], depth+1))
                 return " ".join(msg)
 
             landing_msg = land_on(new_pos)
@@ -301,16 +307,14 @@ if not ss.rolled:
             ss.last_message = f"Landed on **{BOARD[new_pos][0]}**{go_msg} — {landing_msg}"
             if doubles and ss.doubles_streak < 3:
                 ss.rolled = False
-                ss.last_message += " → DOUBLES! Roll again!"
+                ss.last_message += " to DOUBLES! Roll again!"
             st.rerun()
 
-# ======================
-# Buy property — works on card moves too!
-# ======================
+# Buy property
 if ss.rolled and ss.landed is not None and not ss.in_jail.get(cur):
     sq = BOARD[ss.landed]
     if sq[1] in ("prop","rail","util") and ss.properties.get(ss.landed) is None:
-        if st.button(f"Buy {sq[0]} for {sq[2]}g?", key=f"buy_{ss.landed}_{cur}"):
+        if st.button(f"Buy {sq[0]} for {sq[2]}g?", key=f"buy_{ss.landed}"):
             if ss.cash[cur] >= sq[2]:
                 ss.cash[cur] -= sq[2]
                 ss.properties[ss.landed] = cur
@@ -322,23 +326,19 @@ if ss.rolled:
     if ss.get('confirm_next_for') == cur:
         st.warning("End turn and pass to next player?")
         y, n = st.columns(2)
-        if y.button("Yes → Next"):
-            ss.rolled = False
-            ss.landed = None
-            ss.last_message = ""
-            ss.confirm_next_for = None
-            ss.doubles_streak = 0
+        if y.button("Yes to Next"):
+            ss.rolled = False; ss.landed = None; ss.last_message = ""; ss.confirm_next_for = None; ss.doubles_streak = 0
             ss.current_idx = (ss.current_idx + 1) % len(ss.players)
             st.rerun()
         if n.button("No"):
             ss.confirm_next_for = None
             st.rerun()
     else:
-        if st.button("Next Player → Confirm"):
+        if st.button("Next Player to Confirm"):
             ss.confirm_next_for = cur
             st.rerun()
 
-# Trading (unchanged, perfect)
+# Trading
 if st.button("Trade / Deal" if not ss.trade_mode else "Cancel Trade"):
     ss.trade_mode = not ss.trade_mode
     st.rerun()
@@ -375,14 +375,27 @@ if ss.trade_mode:
             ss.last_message = "Trade completed!"
             st.rerun()
 
-# Ownership
+# Ownership — CLEAN & GROUPED
 with st.expander("Ownership Overview", expanded=True):
-    for i, sq in enumerate(BOARD):
-        if sq[1] in ("prop", "rail", "util"):
+    st.markdown("### Properties")
+    for color, positions in COLOR_GROUPS.items():
+        st.markdown(f"**{color.title()} Group**")
+        for i in positions:
             owner = ss.properties.get(i) or "Bank"
-            st.write(f"{i:2d}: **{sq[0]}** — {owner}")
+            st.write(f"   • {BOARD[i][0]} — {owner}")
+
+    st.markdown("### Travel Points")
+    for i in [4, 9, 16, 20]:
+        owner = ss.properties.get(i) or "Bank"
+        st.write(f"   • {BOARD[i][0]} — {owner}")
+
+    st.markdown("### Utilities")
+    for i in [11, 17]:
+        owner = ss.properties.get(i) or "Bank"
+        st.write(f"   • {BOARD[i][0]} — {owner}")
+
     jail_owner = ss.jail_free_card or "Unowned"
-    st.write(f"Get Out of Jail Free — {jail_owner}")
+    st.markdown(f"**Get Out of Jail Free** — {jail_owner}")
 
 # New Game
 if st.button("New Game — Reset Everything"):
