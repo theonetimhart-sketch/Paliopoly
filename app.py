@@ -31,7 +31,7 @@ if not st.session_state.passed_splash:
         if st.button("Continue"):
             st.session_state.players = tentative_players
             st.session_state.passed_splash = True
-            st.experimental_rerun()
+            st.rerun()
     else:
         pwd = st.text_input("Chilled Dude isn't here? What is his name on Discord to continue...", type="password")
         if st.button("Continue"):
@@ -184,7 +184,7 @@ if not st.session_state.initialized:
             st.session_state.chest_deck = random.sample(CHEST_CARDS_LIST, len(CHEST_CARDS_LIST))
             st.session_state.chance_deck = random.sample(CHANCE_CARDS_LIST, len(CHANCE_CARDS_LIST))
             st.success("Game started! Roll those real dice!")
-            st.experimental_rerun()
+            st.rerun()
 
 # ======================
 # helper: get next active player index (skips bankrupt)
