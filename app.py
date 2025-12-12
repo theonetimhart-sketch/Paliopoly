@@ -44,7 +44,7 @@ if not st.session_state.passed_splash:
                 st.success("Password accepted!")
                 st.rerun()
             else:
-                st.error("Wrong password. It's exactly: TJediTim")
+                st.error("Wrong password")
     st.stop()
 
 # ======================
@@ -135,7 +135,7 @@ CHANCE_CARDS_LIST = [
     ("Follow a flutterfox to the next shrub", lambda p,ss,_: (old:=ss['position'][p], ss['position'].__setitem__(p, next((i for i in [11,17] if i>old), 11)), ss['cash'].__setitem__(p, ss['cash'][p]+300) if ss['position'][p] < old else None)),
     ("Ormuu pushes you to next main property", lambda p,ss,_: (old:=ss['position'][p], ss['position'].__setitem__(p, next((i for i in [1,3,7,10,13,15,21,23] if i>old), 1)), ss['cash'].__setitem__(p, ss['cash'][p]+300) if ss['position'][p] < old else None)),
     ("Badruu gives you new fruit, everyone gives you 100g for the seeds", lambda p,ss,_: [ss['cash'].__setitem__(q, ss['cash'][q]-100) or ss['cash'].__setitem__(p, ss['cash'][p]+100) for q in ss['players'] if q!=p]),
-    ("Go and help the truffle at the nearest owned property", lambda p,ss,_: (old:=ss['position'][p], target:=min([i for i,o in ss['properties'].items() if o and BOARD[i][1] in ('prop','rail','util')], key=lambda x:(x-old)%len(BOARD), default=old), ss['position'].__setitem__(p, target), ss['cash'].__setitem__(p, ss['cash'][p]+300) if target != old and ss['position'][p] < old else None)),
+    ("You brought Tamala the wrong ingredient. You have been slapped to the nearest owned property", lambda p,ss,_: (old:=ss['position'][p], target:=min([i for i,o in ss['properties'].items() if o and BOARD[i][1] in ('prop','rail','util')], key=lambda x:(x-old)%len(BOARD), default=old), ss['position'].__setitem__(p, target), ss['cash'].__setitem__(p, ss['cash'][p]+300) if target != old and ss['position'][p] < old else None)),
     ("you lost the Gardners runestone, Pay 100g", lambda p,ss,_: (ss['cash'].__setitem__(p, ss['cash'][p]-100), ss.__setitem__('free_parking_pot', ss['free_parking_pot']+100))),
     ("Reth just started selling beanburgers and flowtato fries, he pays you 200g", lambda p,ss,_: ss['cash'].__setitem__(p, ss['cash'][p]+200))
 ]
