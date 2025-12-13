@@ -6,7 +6,7 @@ import random
 # ======================
 st.set_page_config(page_title="Paliopoly – Chilled Dude Edition", layout="centered")
 st.title("Paliopoly – Chilled Dude Edition")
-st.markdown("**Full set ×2 rent | Clean grouped ownership | Card moves fully land | Trading | Jail**")
+st.markdown("**updated | NO affiliation with S6, just a fun player made app | Clean grouped ownership | Card moves fully land | Trading | Jail**")
 
 # ======================
 # SPLASH SCREEN
@@ -223,7 +223,7 @@ if ss.get('pending_twitch_player') == cur and ss.rolled:
         del ss.pending_twitch_player
         st.rerun()
     if col_n.button("No"):
-        ss.last_message += " | Not following yet — go do it! twitch.tv/lilshrtchit"
+        ss.last_message += " | Not following yet, you missed the bonus prize"
         ss.twitch_bonus_asked.add(cur)
         del ss.pending_twitch_player
         st.rerun()
