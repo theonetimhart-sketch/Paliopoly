@@ -358,7 +358,7 @@ if not ss.rolled:
             st.rerun()
 
 # ======================
-# Buy property — now works after cards/doubles too
+# Buy property
 # ======================
 if ss.rolled and ss.landed is not None and not ss.in_jail.get(cur):
     sq = BOARD[ss.landed]
@@ -371,16 +371,16 @@ if ss.rolled and ss.landed is not None and not ss.in_jail.get(cur):
                 st.rerun()
 
 # ======================
-# Confirm next player — buttons swapped
+# Confirm next player — colored buttons
 # ======================
 if ss.rolled:
     if ss.get('confirm_next_for') == cur:
         st.warning("End turn and pass to next player?")
         no_col, yes_col = st.columns(2)
-        if no_col.button("No"):
+        if no_col.button("No", type="secondary"):  # Neutral but clear
             ss.confirm_next_for = None
             st.rerun()
-        if yes_col.button("Yes → Next", type="primary"):
+        if yes_col.button("Yes → Next", type="primary"):  # Green/success
             ss.rolled = False; ss.landed = None; ss.last_message = ""; ss.confirm_next_for = None; ss.doubles_streak = 0
             ss.current_idx = (ss.current_idx + 1) % len(ss.players)
             st.rerun()
@@ -427,14 +427,14 @@ if ss.trade_mode:
             st.rerun()
 
 # ======================
-# Ownership — NOW IN 2 COLUMNS
+# Ownership — CLEAN 2 COLUMNS, no "(cont.)"
 # ======================
 with st.expander("Ownership Overview", expanded=True):
     left_col, right_col = st.columns(2)
 
     with left_col:
         st.markdown("### Properties")
-        for group_name, positions in list(GROUPS.items())[:2]:  # First two groups
+        for group_name, positions in list(GROUPS.items())[:2]:
             st.markdown(f"**{group_name.title()} Group**")
             for i in positions:
                 owner = ss.properties.get(i) or "Bank"
@@ -451,19 +451,19 @@ with st.expander("Ownership Overview", expanded=True):
             st.write(f"• {BOARD[i][0]} — {owner}")
 
     with right_col:
-        st.markdown("### Properties (cont.)")
-        for group_name, positions in list(GROUPS.items())[2:]:  # Last two groups
+        # No headers — just continuation
+        for group_name, positions in list(GROUPS.items())[2:]:
             st.markdown(f"**{group_name.title()} Group**")
             for i in positions:
                 owner = ss.properties.get(i) or "Bank"
                 st.write(f"• {BOARD[i][0]} — {owner}")
 
-        st.markdown("### Travel Points (cont.)")
+        st.markdown(".")  # Tiny spacer if needed
         for i in [16, 20]:
             owner = ss.properties.get(i) or "Bank"
             st.write(f"• {BOARD[i][0]} — {owner}")
 
-        st.markdown("### Utilities (cont.)")
+        st.markdown(".")  # Tiny spacer
         for i in [17]:
             owner = ss.properties.get(i) or "Bank"
             st.write(f"• {BOARD[i][0]} — {owner}")
