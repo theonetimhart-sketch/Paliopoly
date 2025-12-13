@@ -207,11 +207,11 @@ def check_co_landing_bonus(player, pos):
 
     if "lilshrtchit.ttv" in ss.players and ss.position.get("lilshrtchit.ttv", -1) == pos and player != "lilshrtchit.ttv":
         if player not in ss.twitch_bonus_asked:
-            ss.pending_twitch_player = player  # Flag to show question
+            ss.pending_twitch_player = player
 
     return " | ".join(messages)
 
-# Twitch follow question (only shown if flagged)
+# Twitch follow question
 if ss.get('pending_twitch_player') == cur and ss.rolled:
     st.info("You landed on the same space as lilshrtchit.ttv! Are you following on Twitch?")
     col_y, col_n = st.columns(2)
@@ -250,17 +250,15 @@ if not ss.rolled:
         doubles = st.checkbox("Doubles?", key="doubles_checkbox")
 
     if st.button("Confirm Roll", type="primary"):
-        # Reset any pending twitch question
         if 'pending_twitch_player' in ss:
             del ss.pending_twitch_player
 
-        # ShorTee rolls a 6 easter egg (once per game)
+        # ShorTee rolls a 6 easter egg
         if cur == "lilshrtchit.ttv" and roll == 6 and not ss.shortee_six_message_shown:
             ss.last_message = "ShorTee rolls a 6, are we playing Paliopoly or Push your luck? haha 😂"
             ss.shortee_six_message_shown = True
-            st.rerun()  # Show message before proceeding
+            st.rerun()
 
-        # Jail handling
         if ss.in_jail.get(cur):
             if doubles:
                 ss.in_jail[cur] = False
@@ -279,7 +277,6 @@ if not ss.rolled:
                     ss.rolled = True
                     st.rerun()
 
-        # Doubles streak
         if doubles:
             ss.doubles_streak += 1
             if ss.doubles_streak >= 3:
@@ -290,7 +287,6 @@ if not ss.rolled:
         else:
             ss.doubles_streak = 0
 
-        # Normal movement
         if not ss.in_jail.get(cur):
             old_pos = ss.position[cur]
             new_pos = (old_pos + roll) % len(BOARD)
@@ -362,11 +358,11 @@ if not ss.rolled:
             st.rerun()
 
 # ======================
-# Buy property
+# Buy property — now works after cards/doubles too
 # ======================
 if ss.rolled and ss.landed is not None and not ss.in_jail.get(cur):
     sq = BOARD[ss.landed]
-    if sq[1] in ("prop","rail","util") and ss.properties.get(ss.landed) is None:
+    if sq[1] in ("prop", "rail", "util") and ss.properties.get(ss.landed) is None:
         if st.button(f"Buy {sq[0]} for {sq[2]}g?", key=f"buy_{ss.landed}"):
             if ss.cash[cur] >= sq[2]:
                 ss.cash[cur] -= sq[2]
@@ -375,21 +371,21 @@ if ss.rolled and ss.landed is not None and not ss.in_jail.get(cur):
                 st.rerun()
 
 # ======================
-# Confirm next player
+# Confirm next player — buttons swapped
 # ======================
 if ss.rolled:
     if ss.get('confirm_next_for') == cur:
         st.warning("End turn and pass to next player?")
-        y, n = st.columns(2)
-        if y.button("Yes to Next"):
+        no_col, yes_col = st.columns(2)
+        if no_col.button("No"):
+            ss.confirm_next_for = None
+            st.rerun()
+        if yes_col.button("Yes → Next", type="primary"):
             ss.rolled = False; ss.landed = None; ss.last_message = ""; ss.confirm_next_for = None; ss.doubles_streak = 0
             ss.current_idx = (ss.current_idx + 1) % len(ss.players)
             st.rerun()
-        if n.button("No"):
-            ss.confirm_next_for = None
-            st.rerun()
     else:
-        if st.button("Next Player to Confirm"):
+        if st.button("Next Player → Confirm"):
             ss.confirm_next_for = cur
             st.rerun()
 
@@ -431,25 +427,49 @@ if ss.trade_mode:
             st.rerun()
 
 # ======================
-# Ownership — CLEAN & GROUPED
+# Ownership — NOW IN 2 COLUMNS
 # ======================
 with st.expander("Ownership Overview", expanded=True):
-    st.markdown("### Properties")
-    for group_name, positions in GROUPS.items():
-        st.markdown(f"**{group_name.title()} Group**")
-        for i in positions:
+    left_col, right_col = st.columns(2)
+
+    with left_col:
+        st.markdown("### Properties")
+        for group_name, positions in list(GROUPS.items())[:2]:  # First two groups
+            st.markdown(f"**{group_name.title()} Group**")
+            for i in positions:
+                owner = ss.properties.get(i) or "Bank"
+                st.write(f"• {BOARD[i][0]} — {owner}")
+
+        st.markdown("### Travel Points")
+        for i in [4, 9]:
             owner = ss.properties.get(i) or "Bank"
-            st.write(f" • {BOARD[i][0]} — {owner}")
-    st.markdown("### Travel Points")
-    for i in [4, 9, 16, 20]:
-        owner = ss.properties.get(i) or "Bank"
-        st.write(f" • {BOARD[i][0]} — {owner}")
-    st.markdown("### Utilities")
-    for i in [11, 17]:
-        owner = ss.properties.get(i) or "Bank"
-        st.write(f" • {BOARD[i][0]} — {owner}")
-    jail_owner = ss.jail_free_card or "Unowned"
-    st.markdown(f"**Get Out of Jail Free** — {jail_owner}")
+            st.write(f"• {BOARD[i][0]} — {owner}")
+
+        st.markdown("### Utilities")
+        for i in [11]:
+            owner = ss.properties.get(i) or "Bank"
+            st.write(f"• {BOARD[i][0]} — {owner}")
+
+    with right_col:
+        st.markdown("### Properties (cont.)")
+        for group_name, positions in list(GROUPS.items())[2:]:  # Last two groups
+            st.markdown(f"**{group_name.title()} Group**")
+            for i in positions:
+                owner = ss.properties.get(i) or "Bank"
+                st.write(f"• {BOARD[i][0]} — {owner}")
+
+        st.markdown("### Travel Points (cont.)")
+        for i in [16, 20]:
+            owner = ss.properties.get(i) or "Bank"
+            st.write(f"• {BOARD[i][0]} — {owner}")
+
+        st.markdown("### Utilities (cont.)")
+        for i in [17]:
+            owner = ss.properties.get(i) or "Bank"
+            st.write(f"• {BOARD[i][0]} — {owner}")
+
+        jail_owner = ss.jail_free_card or "Unowned"
+        st.markdown(f"**Get Out of Jail Free** — {jail_owner}")
 
 # ======================
 # New Game
