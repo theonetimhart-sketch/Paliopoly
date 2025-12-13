@@ -346,8 +346,95 @@ if not ss.rolled:
                 ss.last_message += " to DOUBLES! Roll again!"
             st.rerun()
 
-# ======================
-# Property Buying, Next Turn, Trading, Ownership Overview, New Game
-# (Omitted here for brevity; unchanged from your original app)
-# ======================
+# Buy property
+if ss.rolled and ss.landed is not None and not ss.in_jail.get(cur):
+    sq = BOARD[ss.landed]
+    if sq[1] in ("prop","rail","util") and ss.properties.get(ss.landed) is None:
+        if st.button(f"Buy {sq[0]} for {sq[2]}g?", key=f"buy_{ss.landed}"):
+            if ss.cash[cur] >= sq[2]:
+                ss.cash[cur] -= sq[2]
+                ss.properties[ss.landed] = cur
+                ss.last_message = f"{cur} bought {sq[0]}!"
+                st.rerun()
 
+# Confirm next player
+if ss.rolled:
+    if ss.get('confirm_next_for') == cur:
+        st.warning("End turn and pass to next player?")
+        y, n = st.columns(2)
+        if y.button("Yes to Next"):
+            ss.rolled = False; ss.landed = None; ss.last_message = ""; ss.confirm_next_for = None; ss.doubles_streak = 0
+            ss.current_idx = (ss.current_idx + 1) % len(ss.players)
+            st.rerun()
+        if n.button("No"):
+            ss.confirm_next_for = None
+            st.rerun()
+    else:
+        if st.button("Next Player to Confirm"):
+            ss.confirm_next_for = cur
+            st.rerun()
+
+# Trading
+if st.button("Trade / Deal" if not ss.trade_mode else "Cancel Trade"):
+    ss.trade_mode = not ss.trade_mode
+    st.rerun()
+
+if ss.trade_mode:
+    st.subheader("Trade / Deal Maker")
+    others = [p for p in ss.players if p != cur and not ss.bankrupt.get(p, False)]
+    if not others:
+        st.write("No active players to trade with.")
+    else:
+        partner = st.selectbox("Choose trading partner:", others, key="trade_partner")
+        st.markdown("---")
+        st.markdown("### Your Offer")
+        offer_gold = st.number_input(f"{cur} gives gold:", min_value=0, max_value=ss.cash[cur], step=10, key="offer_gold")
+        your_props = [i for i,o in ss.properties.items() if o == cur]
+        offer_props = st.multiselect("Properties you give:", your_props, format_func=lambda i: BOARD[i][0], key="offer_props")
+        offer_jail = (ss.jail_free_card == cur) and st.checkbox("Give Get Out of Jail Free card", key="offer_jail")
+
+        st.markdown("### Their Offer")
+        their_gold = st.number_input(f"{partner} gives gold:", min_value=0, max_value=ss.cash[partner], step=10, key="their_gold")
+        their_props = [i for i,o in ss.properties.items() if o == partner]
+        their_offer_props = st.multiselect("Properties you receive:", their_props, format_func=lambda i: BOARD[i][0], key="their_props")
+        their_jail = (ss.jail_free_card == partner) and st.checkbox("Receive their Get Out of Jail Free card", key="their_jail")
+
+        if st.button("Confirm Trade", type="primary"):
+            ss.cash[cur] -= offer_gold; ss.cash[partner] += offer_gold
+            ss.cash[partner] -= their_gold; ss.cash[cur] += their_gold
+            for i in offer_props: ss.properties[i] = partner
+            for i in their_offer_props: ss.properties[i] = cur
+            if offer_jail: ss.jail_free_card = partner
+            elif their_jail: ss.jail_free_card = cur
+            st.success(f"Trade complete between {cur} and {partner}!")
+            ss.trade_mode = False
+            ss.last_message = "Trade completed!"
+            st.rerun()
+
+# Ownership — CLEAN & GROUPED
+with st.expander("Ownership Overview", expanded=True):
+    st.markdown("### Properties")
+    for color, positions in COLOR_GROUPS.items():
+        st.markdown(f"**{color.title()} Group**")
+        for i in positions:
+            owner = ss.properties.get(i) or "Bank"
+            st.write(f"   • {BOARD[i][0]} — {owner}")
+
+    st.markdown("### Travel Points")
+    for i in [4, 9, 16, 20]:
+        owner = ss.properties.get(i) or "Bank"
+        st.write(f"   • {BOARD[i][0]} — {owner}")
+
+    st.markdown("### Utilities")
+    for i in [11, 17]:
+        owner = ss.properties.get(i) or "Bank"
+        st.write(f"   • {BOARD[i][0]} — {owner}")
+
+    jail_owner = ss.jail_free_card or "Unowned"
+    st.markdown(f"**Get Out of Jail Free** — {jail_owner}")
+
+# New Game
+if st.button("New Game — Reset Everything"):
+    for key in list(st.session_state.keys()):
+        del st.session_state[key]
+    st.rerun()
