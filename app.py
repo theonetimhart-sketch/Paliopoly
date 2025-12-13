@@ -20,7 +20,7 @@ if not st.session_state.passed_splash:
     st.markdown("### Hi ShorTee, thanks for hosting!")
     st.write("make sure everyone playing is watching at https://www.twitch.tv/lilshrtchit")
     if 'splash_players_input' not in st.session_state:
-        st.session_state.splash_players_input = "Chilled Dude, TJediTim, lilshrtchit.ttv"
+        st.session_state.splash_players_input = "Player 1, Player 2, lilshrtchit.ttv"
     st.session_state.splash_players_input = st.text_input(
         "Enter player names (comma separated):",
         st.session_state.splash_players_input
@@ -427,7 +427,7 @@ if ss.trade_mode:
             st.rerun()
 
 # ======================
-# Ownership — CLEAN 2 COLUMNS, no "(cont.)"
+# Ownership — CLEAN 2 COLUMNS, perfectly aligned
 # ======================
 with st.expander("Ownership Overview", expanded=True):
     left_col, right_col = st.columns(2)
@@ -451,23 +451,25 @@ with st.expander("Ownership Overview", expanded=True):
             st.write(f"• {BOARD[i][0]} — {owner}")
 
     with right_col:
-        # No headers — just continuation
+        # Invisible matching headers to align vertically
+        st.markdown("### &nbsp;")  # Matches "### Properties" height
         for group_name, positions in list(GROUPS.items())[2:]:
             st.markdown(f"**{group_name.title()} Group**")
             for i in positions:
                 owner = ss.properties.get(i) or "Bank"
                 st.write(f"• {BOARD[i][0]} — {owner}")
 
-        st.markdown(".")  # Tiny spacer if needed
+        st.markdown("### &nbsp;")  # Matches "### Travel Points"
         for i in [16, 20]:
             owner = ss.properties.get(i) or "Bank"
             st.write(f"• {BOARD[i][0]} — {owner}")
 
-        st.markdown(".")  # Tiny spacer
+        st.markdown("### &nbsp;")  # Matches "### Utilities"
         for i in [17]:
             owner = ss.properties.get(i) or "Bank"
             st.write(f"• {BOARD[i][0]} — {owner}")
 
+        # Get Out of Jail Free at the bottom, naturally aligned
         jail_owner = ss.jail_free_card or "Unowned"
         st.markdown(f"**Get Out of Jail Free** — {jail_owner}")
 
