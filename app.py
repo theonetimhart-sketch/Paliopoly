@@ -153,7 +153,7 @@ if 'initialized' not in st.session_state:
         'doubles_streak': 0,
         'rolled': False,
         'landed': None,
-        'last_landed': None,  # NEW: remembers landing during doubles roll-again
+        'last_landed': None,
         'last_message': "",
         'trade_mode': False,
         'starting_square': "",
@@ -168,7 +168,6 @@ if 'initialized' not in st.session_state:
         'shortee_double6_shown': False,
         'group_levels': {group: 0 for group in GROUPS.keys()},
         'show_victory': False,
-        'buy_counter': 0,
     })
 
 ss = st.session_state
@@ -193,7 +192,7 @@ c1, c2, c3, c4 = st.columns([2, 2, 2, 3])
 c1.markdown(f"**Turn: {cur}** {'(JAILED)' if ss.in_jail.get(cur) else ''}")
 c2.markdown(f"**Gold:** {ss.cash[cur]}g")
 c3.markdown(f"**Free Parking Pot:** {ss.free_parking_pot}g")
-if ss.rolled:
+if ss.rolled or ss.last_landed is not None:
     c4.success(f"Started on: **{ss.starting_square}**")
 if ss.last_message:
     st.success(ss.last_message)
@@ -320,7 +319,7 @@ if not ss.rolled:
 
         ss.position[cur] = new_pos
         ss.landed = new_pos
-        ss.last_landed = new_pos  # Remember for buy button
+        ss.last_landed = new_pos
         ss.starting_square = BOARD[old_pos][0]
         ss.rolled = True
 
@@ -363,7 +362,7 @@ if not ss.rolled:
                 if ss.position[cur] != old: msg.append(land_on(ss.position[cur], depth+1))
             elif typ == "chance":
                 if not ss.chance_deck: ss.chance_deck = random.sample(CHANCE_CARDS_LIST, len(CHANCE_CARDS_LIST))
-                card = ss.chance_deck.pop(0); ss.chance_deck.append(card)
+                card = ss.chance_deck.pop(0); ss.chest_deck.append(card)
                 old = ss.position[cur]; card[1](cur, ss, roll)
                 msg.append(f"Chance: {card[0]}")
                 if ss.position[cur] != old: msg.append(land_on(ss.position[cur], depth+1))
@@ -379,23 +378,22 @@ if not ss.rolled:
         if doubles and ss.doubles_streak < 3:
             ss.rolled = False
             ss.last_message += " | DOUBLES! Roll again!"
-
         st.rerun()
 
 # ======================
-# Buy property — WORKS DURING DOUBLES ROLL-AGAIN
+# Buy property — FIXED TO WORK ON EVERY LANDING
 # ======================
 if (ss.rolled or ss.last_landed is not None) and not ss.in_jail.get(cur):
     current_landed = ss.landed if ss.rolled else ss.last_landed
     sq = BOARD[current_landed]
     if sq[1] in ("prop", "rail", "util") and ss.properties.get(current_landed) is None:
-        ss.buy_counter += 1
-        buy_key = f"buy_{current_landed}_{cur}_{ss.buy_counter}"
+        buy_key = f"buy_{current_landed}_{cur}_{ss.position[cur]}"
         if st.button(f"Buy {sq[0]} for {sq[2]}g?", key=buy_key):
             if ss.cash[cur] >= sq[2]:
                 ss.cash[cur] -= sq[2]
                 ss.properties[current_landed] = cur
                 ss.last_message = f"{cur} bought {sq[0]}!"
+                # Keep last_landed so buy button stays until turn end
                 st.rerun()
 
 # ======================
