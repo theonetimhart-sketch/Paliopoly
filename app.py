@@ -362,7 +362,7 @@ if not ss.rolled:
                 if ss.position[cur] != old: msg.append(land_on(ss.position[cur], depth+1))
             elif typ == "chance":
                 if not ss.chance_deck: ss.chance_deck = random.sample(CHANCE_CARDS_LIST, len(CHANCE_CARDS_LIST))
-                card = ss.chance_deck.pop(0); ss.chest_deck.append(card)
+                card = ss.chance_deck.pop(0); ss.chance_deck.append(card)
                 old = ss.position[cur]; card[1](cur, ss, roll)
                 msg.append(f"Chance: {card[0]}")
                 if ss.position[cur] != old: msg.append(land_on(ss.position[cur], depth+1))
@@ -378,10 +378,11 @@ if not ss.rolled:
         if doubles and ss.doubles_streak < 3:
             ss.rolled = False
             ss.last_message += " | DOUBLES! Roll again!"
+
         st.rerun()
 
 # ======================
-# Buy property — FIXED TO WORK ON EVERY LANDING
+# Buy property — WORKS ON EVERY LANDING
 # ======================
 if (ss.rolled or ss.last_landed is not None) and not ss.in_jail.get(cur):
     current_landed = ss.landed if ss.rolled else ss.last_landed
@@ -393,7 +394,6 @@ if (ss.rolled or ss.last_landed is not None) and not ss.in_jail.get(cur):
                 ss.cash[cur] -= sq[2]
                 ss.properties[current_landed] = cur
                 ss.last_message = f"{cur} bought {sq[0]}!"
-                # Keep last_landed so buy button stays until turn end
                 st.rerun()
 
 # ======================
@@ -460,7 +460,7 @@ if ss.trade_mode:
             st.rerun()
 
 # ======================
-# Ownership Overview
+# Ownership Overview — PERFECT ALIGNMENT + COLOR-CODING FOR FULL GROUPS
 # ======================
 with st.expander("Ownership Overview", expanded=True):
     left_col, right_col = st.columns(2)
@@ -468,7 +468,12 @@ with st.expander("Ownership Overview", expanded=True):
     with left_col:
         st.markdown("### Properties")
         for group_name, positions in list(GROUPS.items())[:2]:
-            st.markdown(f"**{group_name.title()} Group** (Level {ss.group_levels[group_name]})")
+            # Check if group is fully owned by one player
+            owners = {ss.properties.get(i) for i in positions}
+            full_owned = len(owners) == 1 and None not in owners
+            header_style = '<div style="background-color:white;color:black;padding:4px 8px;border-radius:6px;display:inline-block;">' if full_owned else ""
+            header_end = "</div>" if full_owned else ""
+            st.markdown(f"**{header_style}{group_name.title()} Group (Level {ss.group_levels[group_name]}){header_end}**", unsafe_allow_html=True)
             for i in positions:
                 owner = ss.properties.get(i) or "Bank"
                 st.write(f"• {BOARD[i][0]} — {owner}")
@@ -486,17 +491,21 @@ with st.expander("Ownership Overview", expanded=True):
     with right_col:
         st.markdown("### &nbsp;")
         for group_name, positions in list(GROUPS.items())[2:]:
-            st.markdown(f"**{group_name.title()} Group** (Level {ss.group_levels[group_name]})")
+            owners = {ss.properties.get(i) for i in positions}
+            full_owned = len(owners) == 1 and None not in owners
+            header_style = '<div style="background-color:white;color:black;padding:4px 8px;border-radius:6px;display:inline-block;">' if full_owned else ""
+            header_end = "</div>" if full_owned else ""
+            st.markdown(f"**{header_style}{group_name.title()} Group (Level {ss.group_levels[group_name]}){header_end}**", unsafe_allow_html=True)
             for i in positions:
                 owner = ss.properties.get(i) or "Bank"
                 st.write(f"• {BOARD[i][0]} — {owner}")
 
-        st.markdown("### &nbsp;")
+        st.markdown("### Travel Points")
         for i in [16, 20]:
             owner = ss.properties.get(i) or "Bank"
             st.write(f"• {BOARD[i][0]} — {owner}")
 
-        st.markdown("### &nbsp;")
+        st.markdown("### Utilities")
         for i in [17]:
             owner = ss.properties.get(i) or "Bank"
             st.write(f"• {BOARD[i][0]} — {owner}")
