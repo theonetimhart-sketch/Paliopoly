@@ -178,21 +178,6 @@ while ss.bankrupt.get(cur, False):
     cur = ss.players[ss.current_idx]
 
 # ======================
-# HELPER: Reset group level if full set owner changes
-# ======================
-def update_group_levels_after_trade():
-    for group, positions in GROUPS.items():
-        owners = {ss.properties.get(i) for i in positions if ss.properties.get(i) is not None}
-        if len(owners) == 1 and None not in owners:
-            owner = next(iter(owners))
-            # If level was previously earned by someone else, reset to 0 for new owner
-            # (Simple approach: reset if not the same as last known owner — but we don't track last, so reset to 0 on any trade affecting group)
-            # For simplicity, reset level to 0 when group becomes full (new owner must earn levels)
-            ss.group_levels[group] = 0
-        else:
-            ss.group_levels[group] = 0  # Not full set
-
-# ======================
 # UI: Player status
 # ======================
 with st.expander("Players & Cash", expanded=True):
@@ -251,10 +236,22 @@ if ss.get('pending_twitch_player') == cur and (ss.rolled or ss.last_landed is no
 # ======================
 if ss.in_jail.get(cur):
     col_pay, col_card = st.columns(2)
-    if col_pay.button("Pay 50g to leave jail") and ss.cash[cur] >= 50:
-        ss.cash[cur] -= 50; ss.free_parking_pot += 50; ss.in_jail[cur] = False; ss.jail_turns[cur] = 0; st.rerun()
+    if col_pay.button("Pay 50g to leave jail"):
+        if ss.cash[cur] >= 50:
+            ss.cash[cur] -= 50
+            ss.free_parking_pot += 50
+            ss.in_jail[cur] = False
+            ss.jail_turns[cur] = 0
+            ss.last_message = "Paid 50g and out of jail — roll for your turn!"
+            st.rerun()
+        else:
+            st.error("Not enough gold to pay 50g!")
     if col_card.button("Use Get Out of Jail Free") and ss.jail_free_card == cur:
-        ss.jail_free_card = None; ss.in_jail[cur] = False; st.rerun()
+        ss.jail_free_card = None
+        ss.in_jail[cur] = False
+        ss.jail_turns[cur] = 0
+        ss.last_message = "Used Get Out of Jail Free — roll for your turn!"
+        st.rerun()
 
 # ======================
 # Roll dice
@@ -290,16 +287,18 @@ if not ss.rolled:
                 ss.jail_turns[cur] += 1
                 if ss.jail_turns[cur] >= 3:
                     if ss.cash[cur] >= 50:
-                        ss.cash[cur] -= 50; ss.free_parking_pot += 50; ss.in_jail[cur] = False
-                        ss.last_message = "Paid 50g to get out of jail. Now roll normally."
+                        ss.cash[cur] -= 50
+                        ss.free_parking_pot += 50
+                        ss.in_jail[cur] = False
+                        ss.last_message = "Paid 50g after 3 turns — now roll for your turn!"
                         ss.rolled = False
                         st.rerun()
                     else:
-                        ss.last_message = "Can't pay 50g — stuck in jail!"
+                        ss.last_message = "Can't pay 50g — turn skipped (still in jail)"
                         ss.rolled = True
                         st.rerun()
                 else:
-                    ss.last_message = f"No doubles — jail turn {ss.jail_turns[cur]}/3"
+                    ss.last_message = f"No doubles — jail turn {ss.jail_turns[cur]}/3 (turn skipped)"
                     ss.rolled = True
                     st.rerun()
             st.stop()
@@ -328,7 +327,6 @@ if not ss.rolled:
         if passed_go:
             ss.cash[cur] += 300
             st.balloons()
-            # Only increment level if current player owns the full set
             for group, positions in GROUPS.items():
                 if all(ss.properties.get(i) == cur for i in positions):
                     ss.group_levels[group] = min(ss.group_levels[group] + 1, 5)
@@ -360,14 +358,15 @@ if not ss.rolled:
                         group = sq[5]
                         full_set = all(ss.properties.get(i) == owner for i in GROUPS[group])
                         level = ss.group_levels[group] if full_set else 0
-                        rent = base_rent * (2 + level) if full_set else base_rent  # Fixed calculation
+                        rent = base_rent * (2 + level) if full_set else base_rent
                     elif typ == "rail":
                         owned = sum(1 for i,o in ss.properties.items() if o==owner and BOARD[i][1]=="rail")
                         rent = 40 * (2 ** (owned-1))
                     else:
                         owned = sum(1 for i,o in ss.properties.items() if o==owner and BOARD[i][1]=="util")
-                        rent = roll * (10 if owned == 2 else 4)
-                    ss.cash[cur] -= rent; ss.cash[owner] += rent
+                        rent = "4x or 10x dice"
+                    ss.cash[cur] -= rent if isinstance(rent, int) else 0  # Only subtract if numeric
+                    ss.cash[owner] += rent if isinstance(rent, int) else 0
                     extra = f" (level {level} full set!)" if typ == "prop" and full_set and level > 0 else " (full set!)" if full_set else ""
                     msg.append(f"Paid {owner} {rent}g rent{extra}")
             elif typ == "chest":
@@ -468,8 +467,8 @@ if ss.trade_mode:
             ss.cash[partner] -= their_gold; ss.cash[cur] += their_gold
             traded_groups = set()
             for i in offer_props + their_offer_props:
-                group = BOARD[i][5] if len(BOARD[i]) > 5 else None
-                if group:
+                if len(BOARD[i]) > 5:
+                    group = BOARD[i][5]
                     traded_groups.add(group)
                 ss.properties[i] = partner if i in offer_props else cur
             if offer_jail: ss.jail_free_card = partner
@@ -483,10 +482,31 @@ if ss.trade_mode:
             st.rerun()
 
 # ======================
-# Ownership Overview — COLOR-CODED FULL GROUPS
+# Ownership Overview — WITH RENT VALUES + COLOR-CODING
 # ======================
 with st.expander("Ownership Overview", expanded=True):
     left_col, right_col = st.columns(2)
+
+    def get_rent_text(i):
+        sq = BOARD[i]
+        typ = sq[1]
+        owner = ss.properties.get(i)
+        if not owner:
+            return "Bank"
+        if typ == "prop":
+            base_rent = sq[3]
+            group = sq[5]
+            full_set = all(ss.properties.get(j) == owner for j in GROUPS[group])
+            level = ss.group_levels[group] if full_set else 0
+            rent = base_rent * (2 + level) if full_set else base_rent
+            return f"{owner} (Rent: {rent}g)"
+        elif typ == "rail":
+            owned = sum(1 for j,o in ss.properties.items() if o==owner and BOARD[j][1]=="rail")
+            rent = 40 * (2 ** (owned-1))
+            return f"{owner} (Rent: {rent}g)"
+        elif typ == "util":
+            return f"{owner} (Rent: 4x or 10x dice)"
+        return owner
 
     with left_col:
         st.markdown("### Properties")
@@ -497,18 +517,15 @@ with st.expander("Ownership Overview", expanded=True):
             header_end = "</div>" if full_owned else ""
             st.markdown(f"**{header_style}{group_name.title()} Group (Level {ss.group_levels[group_name]}){header_end}**", unsafe_allow_html=True)
             for i in positions:
-                owner = ss.properties.get(i) or "Bank"
-                st.write(f"• {BOARD[i][0]} — {owner}")
+                st.write(f"• {BOARD[i][0]} — {get_rent_text(i)}")
 
         st.markdown("### Travel Points")
         for i in [4, 9]:
-            owner = ss.properties.get(i) or "Bank"
-            st.write(f"• {BOARD[i][0]} — {owner}")
+            st.write(f"• {BOARD[i][0]} — {get_rent_text(i)}")
 
         st.markdown("### Utilities")
         for i in [11]:
-            owner = ss.properties.get(i) or "Bank"
-            st.write(f"• {BOARD[i][0]} — {owner}")
+            st.write(f"• {BOARD[i][0]} — {get_rent_text(i)}")
 
     with right_col:
         st.markdown("### &nbsp;")
@@ -519,18 +536,15 @@ with st.expander("Ownership Overview", expanded=True):
             header_end = "</div>" if full_owned else ""
             st.markdown(f"**{header_style}{group_name.title()} Group (Level {ss.group_levels[group_name]}){header_end}**", unsafe_allow_html=True)
             for i in positions:
-                owner = ss.properties.get(i) or "Bank"
-                st.write(f"• {BOARD[i][0]} — {owner}")
+                st.write(f"• {BOARD[i][0]} — {get_rent_text(i)}")
 
         st.markdown("### Travel Points")
         for i in [16, 20]:
-            owner = ss.properties.get(i) or "Bank"
-            st.write(f"• {BOARD[i][0]} — {owner}")
+            st.write(f"• {BOARD[i][0]} — {get_rent_text(i)}")
 
         st.markdown("### Utilities")
         for i in [17]:
-            owner = ss.properties.get(i) or "Bank"
-            st.write(f"• {BOARD[i][0]} — {owner}")
+            st.write(f"• {BOARD[i][0]} — {get_rent_text(i)}")
 
         jail_owner = ss.jail_free_card or "Unowned"
         st.markdown(f"**Get Out of Jail Free** — {jail_owner}")
