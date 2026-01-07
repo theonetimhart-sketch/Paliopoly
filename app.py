@@ -6,7 +6,7 @@ import random
 # ======================
 st.set_page_config(page_title="Paliopoly – Chilled Dude Edition", layout="centered")
 st.title("Paliopoly – Chilled Dude Edition")
-st.markdown("**Shortees Birthday Release v1.0**")
+st.markdown("**Shortees Birthday Release V1.0**")
 
 # ======================
 # SPLASH SCREEN
@@ -20,7 +20,7 @@ if not st.session_state.passed_splash:
     st.markdown("### Hi ShorTee, thanks for hosting!")
     st.write("make sure everyone playing is watching at https://www.twitch.tv/lilshrtchit")
     if 'splash_players_input' not in st.session_state:
-        st.session_state.splash_players_input = "Chilled Dude, TJediTim, lilshrtchit.ttv"
+        st.session_state.splash_players_input = "Player 1, lilshrtchit.ttv (dont change this for your easter egg Shortee)"
     st.session_state.splash_players_input = st.text_input(
         "Enter player names (comma separated):",
         st.session_state.splash_players_input
@@ -241,7 +241,7 @@ if ss.in_jail.get(cur):
         ss.jail_free_card = None; ss.in_jail[cur] = False; st.rerun()
 
 # ======================
-# Roll dice — FIXED DOUBLES CHECKBOX
+# Roll dice — FIXED DOUBLES
 # ======================
 if not ss.rolled:
     st.info("Enter your real dice roll")
@@ -249,7 +249,6 @@ if not ss.rolled:
     doubles_possible = (roll % 2 == 0)
     doubles = False
     if doubles_possible:
-        # Unique key per turn to avoid Streamlit conflicts
         doubles_key = f"doubles_{cur}_{ss.current_idx}_{ss.position[cur]}"
         doubles = st.checkbox("Doubles?", value=False, key=doubles_key)
 
@@ -287,7 +286,7 @@ if not ss.rolled:
                     ss.last_message = f"No doubles — jail turn {ss.jail_turns[cur]}/3"
                     ss.rolled = True
                     st.rerun()
-            st.stop()  # Don't continue to movement if still in jail logic
+            st.stop()
 
         # Doubles streak
         if doubles:
@@ -295,12 +294,13 @@ if not ss.rolled:
             if ss.doubles_streak >= 3:
                 ss.position[cur] = 6; ss.in_jail[cur] = True; ss.jail_turns[cur] = 0
                 ss.last_message = "3 DOUBLES to JAIL!"
-                ss.rolled = True; ss.landed = None
+                ss.rolled = True
+                ss.landed = None
                 st.rerun()
         else:
             ss.doubles_streak = 0
 
-        # Normal movement
+        # Movement
         old_pos = ss.position[cur]
         new_pos = (old_pos + roll) % len(BOARD)
         passed_go = (old_pos + roll >= len(BOARD)) or new_pos == 0
@@ -308,7 +308,6 @@ if not ss.rolled:
         if passed_go:
             ss.cash[cur] += 300
             st.balloons()
-            # Auto-house building on full sets
             for group, positions in GROUPS.items():
                 if all(ss.properties.get(i) == cur for i in positions):
                     ss.group_levels[group] = min(ss.group_levels[group] + 1, 5)
@@ -373,16 +372,15 @@ if not ss.rolled:
         if doubles and ss.doubles_streak < 3:
             ss.rolled = False
             ss.last_message += " | DOUBLES! Roll again!"
-
         st.rerun()
 
 # ======================
-# Buy property
+# Buy property — WORKS ON EVERY LANDING INCLUDING DOUBLES
 # ======================
 if ss.rolled and ss.landed is not None and not ss.in_jail.get(cur):
     sq = BOARD[ss.landed]
     if sq[1] in ("prop", "rail", "util") and ss.properties.get(ss.landed) is None:
-        buy_key = f"buy_{ss.landed}_{cur}_{ss.doubles_streak}"
+        buy_key = f"buy_{ss.landed}_{cur}_{ss.doubles_streak}_{ss.position[cur]}"
         if st.button(f"Buy {sq[0]} for {sq[2]}g?", key=buy_key):
             if ss.cash[cur] >= sq[2]:
                 ss.cash[cur] -= sq[2]
@@ -391,9 +389,11 @@ if ss.rolled and ss.landed is not None and not ss.in_jail.get(cur):
                 st.rerun()
 
 # ======================
-# Confirm next player
+# Confirm next player — ONLY WHEN TURN IS ACTUALLY OVER
 # ======================
-if ss.rolled:
+turn_over = ss.rolled and (ss.doubles_streak == 0 or ss.doubles_streak >= 3)
+
+if turn_over:
     if ss.get('confirm_next_for') == cur:
         st.warning("End turn and pass to next player?")
         no_col, yes_col = st.columns(2)
@@ -401,7 +401,11 @@ if ss.rolled:
             ss.confirm_next_for = None
             st.rerun()
         if yes_col.button("Yes → Next", type="primary"):
-            ss.rolled = False; ss.landed = None; ss.last_message = ""; ss.confirm_next_for = None; ss.doubles_streak = 0
+            ss.rolled = False
+            ss.landed = None
+            ss.last_message = ""
+            ss.confirm_next_for = None
+            ss.doubles_streak = 0
             ss.current_idx = (ss.current_idx + 1) % len(ss.players)
             st.rerun()
     else:
@@ -410,7 +414,7 @@ if ss.rolled:
             st.rerun()
 
 # ======================
-# Trading
+# Trading (unchanged)
 # ======================
 if st.button("Trade / Deal" if not ss.trade_mode else "Cancel Trade"):
     ss.trade_mode = not ss.trade_mode
@@ -447,7 +451,7 @@ if ss.trade_mode:
             st.rerun()
 
 # ======================
-# Ownership — CLEAN 2 COLUMNS, aligned
+# Ownership Overview — CLEAN & ALIGNED
 # ======================
 with st.expander("Ownership Overview", expanded=True):
     left_col, right_col = st.columns(2)
