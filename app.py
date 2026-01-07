@@ -166,7 +166,7 @@ if 'initialized' not in st.session_state:
         'twitch_bonus_asked': set(),
         'twitch_bonus_given': set(),
         'shortee_double6_shown': False,
-        'group_levels': {group: 0 for group in GROUPS.keys()},
+        'group_levels': {group: 0 for group in GROUPS},
         'show_victory': False,
     })
 
@@ -354,19 +354,19 @@ if not ss.rolled:
                 owner = ss.properties.get(pos)
                 if owner and owner != cur:
                     if typ == "prop":
-                        base_rent = sq[3]
+                        base_set_rent = sq[4]  # Your level 0 full set rent value
                         group = sq[5]
                         full_set = all(ss.properties.get(i) == owner for i in GROUPS[group])
                         level = ss.group_levels[group] if full_set else 0
-                        rent = base_rent * (2 + level) if full_set else base_rent
+                        rent = base_set_rent * (2 ** level) if full_set else sq[3]  # Doubles each level
                     elif typ == "rail":
                         owned = sum(1 for i,o in ss.properties.items() if o==owner and BOARD[i][1]=="rail")
                         rent = 40 * (2 ** (owned-1))
                     else:
                         owned = sum(1 for i,o in ss.properties.items() if o==owner and BOARD[i][1]=="util")
-                        rent = "4x or 10x dice"
-                    ss.cash[cur] -= rent if isinstance(rent, int) else 0  # Only subtract if numeric
-                    ss.cash[owner] += rent if isinstance(rent, int) else 0
+                        rent = roll * (10 if owned == 2 else 4)
+                    ss.cash[cur] -= rent
+                    ss.cash[owner] += rent
                     extra = f" (level {level} full set!)" if typ == "prop" and full_set and level > 0 else " (full set!)" if full_set else ""
                     msg.append(f"Paid {owner} {rent}g rent{extra}")
             elif typ == "chest":
@@ -473,7 +473,6 @@ if ss.trade_mode:
                 ss.properties[i] = partner if i in offer_props else cur
             if offer_jail: ss.jail_free_card = partner
             elif their_jail: ss.jail_free_card = cur
-            # Reset levels for traded groups
             for group in traded_groups:
                 ss.group_levels[group] = 0
             st.success(f"Trade complete between {cur} and {partner}!")
@@ -494,11 +493,11 @@ with st.expander("Ownership Overview", expanded=True):
         if not owner:
             return "Bank"
         if typ == "prop":
-            base_rent = sq[3]
+            base_set_rent = sq[4]
             group = sq[5]
             full_set = all(ss.properties.get(j) == owner for j in GROUPS[group])
             level = ss.group_levels[group] if full_set else 0
-            rent = base_rent * (2 + level) if full_set else base_rent
+            rent = base_set_rent * (2 ** level) if full_set else sq[3]
             return f"{owner} (Rent: {rent}g)"
         elif typ == "rail":
             owned = sum(1 for j,o in ss.properties.items() if o==owner and BOARD[j][1]=="rail")
