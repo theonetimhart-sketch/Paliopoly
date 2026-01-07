@@ -178,6 +178,21 @@ while ss.bankrupt.get(cur, False):
     cur = ss.players[ss.current_idx]
 
 # ======================
+# HELPER: Reset group level if full set owner changes
+# ======================
+def update_group_levels_after_trade():
+    for group, positions in GROUPS.items():
+        owners = {ss.properties.get(i) for i in positions if ss.properties.get(i) is not None}
+        if len(owners) == 1 and None not in owners:
+            owner = next(iter(owners))
+            # If level was previously earned by someone else, reset to 0 for new owner
+            # (Simple approach: reset if not the same as last known owner — but we don't track last, so reset to 0 on any trade affecting group)
+            # For simplicity, reset level to 0 when group becomes full (new owner must earn levels)
+            ss.group_levels[group] = 0
+        else:
+            ss.group_levels[group] = 0  # Not full set
+
+# ======================
 # UI: Player status
 # ======================
 with st.expander("Players & Cash", expanded=True):
@@ -313,6 +328,7 @@ if not ss.rolled:
         if passed_go:
             ss.cash[cur] += 300
             st.balloons()
+            # Only increment level if current player owns the full set
             for group, positions in GROUPS.items():
                 if all(ss.properties.get(i) == cur for i in positions):
                     ss.group_levels[group] = min(ss.group_levels[group] + 1, 5)
@@ -344,7 +360,7 @@ if not ss.rolled:
                         group = sq[5]
                         full_set = all(ss.properties.get(i) == owner for i in GROUPS[group])
                         level = ss.group_levels[group] if full_set else 0
-                        rent = base_rent * (2 + level) if full_set else base_rent
+                        rent = base_rent * (2 + level) if full_set else base_rent  # Fixed calculation
                     elif typ == "rail":
                         owned = sum(1 for i,o in ss.properties.items() if o==owner and BOARD[i][1]=="rail")
                         rent = 40 * (2 ** (owned-1))
@@ -382,7 +398,7 @@ if not ss.rolled:
         st.rerun()
 
 # ======================
-# Buy property — WORKS ON EVERY LANDING
+# Buy property
 # ======================
 if (ss.rolled or ss.last_landed is not None) and not ss.in_jail.get(cur):
     current_landed = ss.landed if ss.rolled else ss.last_landed
@@ -397,7 +413,7 @@ if (ss.rolled or ss.last_landed is not None) and not ss.in_jail.get(cur):
                 st.rerun()
 
 # ======================
-# Confirm next player — ONLY WHEN TURN IS OVER
+# Confirm next player
 # ======================
 turn_over = ss.rolled and ss.doubles_streak == 0
 
@@ -450,17 +466,24 @@ if ss.trade_mode:
         if st.button("Confirm Trade", type="primary"):
             ss.cash[cur] -= offer_gold; ss.cash[partner] += offer_gold
             ss.cash[partner] -= their_gold; ss.cash[cur] += their_gold
-            for i in offer_props: ss.properties[i] = partner
-            for i in their_offer_props: ss.properties[i] = cur
+            traded_groups = set()
+            for i in offer_props + their_offer_props:
+                group = BOARD[i][5] if len(BOARD[i]) > 5 else None
+                if group:
+                    traded_groups.add(group)
+                ss.properties[i] = partner if i in offer_props else cur
             if offer_jail: ss.jail_free_card = partner
             elif their_jail: ss.jail_free_card = cur
+            # Reset levels for traded groups
+            for group in traded_groups:
+                ss.group_levels[group] = 0
             st.success(f"Trade complete between {cur} and {partner}!")
             ss.trade_mode = False
             ss.last_message = "Trade completed!"
             st.rerun()
 
 # ======================
-# Ownership Overview — PERFECT ALIGNMENT + COLOR-CODING FOR FULL GROUPS
+# Ownership Overview — COLOR-CODED FULL GROUPS
 # ======================
 with st.expander("Ownership Overview", expanded=True):
     left_col, right_col = st.columns(2)
@@ -468,7 +491,6 @@ with st.expander("Ownership Overview", expanded=True):
     with left_col:
         st.markdown("### Properties")
         for group_name, positions in list(GROUPS.items())[:2]:
-            # Check if group is fully owned by one player
             owners = {ss.properties.get(i) for i in positions}
             full_owned = len(owners) == 1 and None not in owners
             header_style = '<div style="background-color:white;color:black;padding:4px 8px;border-radius:6px;display:inline-block;">' if full_owned else ""
