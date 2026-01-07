@@ -167,6 +167,7 @@ if 'initialized' not in st.session_state:
         'shortee_double6_shown': False,
         'group_levels': {group: 0 for group in GROUPS.keys()},
         'show_victory': False,
+        'buy_counter': 0,  # Ensures unique buy button keys
     })
 
 ss = st.session_state
@@ -292,10 +293,13 @@ if not ss.rolled:
         if doubles:
             ss.doubles_streak += 1
             if ss.doubles_streak >= 3:
-                ss.position[cur] = 6; ss.in_jail[cur] = True; ss.jail_turns[cur] = 0
+                ss.position[cur] = 6
+                ss.in_jail[cur] = True
+                ss.jail_turns[cur] = 0
                 ss.last_message = "3 DOUBLES to JAIL!"
                 ss.rolled = True
                 ss.landed = None
+                ss.doubles_streak = 0
                 st.rerun()
         else:
             ss.doubles_streak = 0
@@ -375,12 +379,13 @@ if not ss.rolled:
         st.rerun()
 
 # ======================
-# Buy property — NOW WORKS ON EVERY LANDING INCLUDING DOUBLES CHAINS
+# Buy property — WORKS ON EVERY LANDING INCLUDING MID-DOUBLES
 # ======================
 if ss.rolled and ss.landed is not None and not ss.in_jail.get(cur):
     sq = BOARD[ss.landed]
     if sq[1] in ("prop", "rail", "util") and ss.properties.get(ss.landed) is None:
-        buy_key = f"buy_{ss.landed}_{cur}_{ss.doubles_streak}_{ss.position[cur]}"
+        ss.buy_counter += 1
+        buy_key = f"buy_{ss.landed}_{cur}_{ss.buy_counter}"
         if st.button(f"Buy {sq[0]} for {sq[2]}g?", key=buy_key):
             if ss.cash[cur] >= sq[2]:
                 ss.cash[cur] -= sq[2]
@@ -389,7 +394,7 @@ if ss.rolled and ss.landed is not None and not ss.in_jail.get(cur):
                 st.rerun()
 
 # ======================
-# Confirm next player — ONLY WHEN TURN IS ACTUALLY OVER (no more doubles pending)
+# Confirm next player — ONLY WHEN TURN IS OVER
 # ======================
 turn_over = ss.rolled and ss.doubles_streak == 0
 
@@ -451,7 +456,7 @@ if ss.trade_mode:
             st.rerun()
 
 # ======================
-# Ownership Overview
+# Ownership Overview — CLEAN & ALIGNED
 # ======================
 with st.expander("Ownership Overview", expanded=True):
     left_col, right_col = st.columns(2)
