@@ -375,7 +375,7 @@ if not ss.rolled:
         st.rerun()
 
 # ======================
-# Buy property — WORKS ON EVERY LANDING INCLUDING DOUBLES
+# Buy property — NOW WORKS ON EVERY LANDING INCLUDING DOUBLES CHAINS
 # ======================
 if ss.rolled and ss.landed is not None and not ss.in_jail.get(cur):
     sq = BOARD[ss.landed]
@@ -389,9 +389,9 @@ if ss.rolled and ss.landed is not None and not ss.in_jail.get(cur):
                 st.rerun()
 
 # ======================
-# Confirm next player — ONLY WHEN TURN IS ACTUALLY OVER
+# Confirm next player — ONLY WHEN TURN IS ACTUALLY OVER (no more doubles pending)
 # ======================
-turn_over = ss.rolled and (ss.doubles_streak == 0 or ss.doubles_streak >= 3)
+turn_over = ss.rolled and ss.doubles_streak == 0
 
 if turn_over:
     if ss.get('confirm_next_for') == cur:
@@ -414,7 +414,7 @@ if turn_over:
             st.rerun()
 
 # ======================
-# Trading (unchanged)
+# Trading
 # ======================
 if st.button("Trade / Deal" if not ss.trade_mode else "Cancel Trade"):
     ss.trade_mode = not ss.trade_mode
@@ -451,7 +451,7 @@ if ss.trade_mode:
             st.rerun()
 
 # ======================
-# Ownership Overview — CLEAN & ALIGNED
+# Ownership Overview
 # ======================
 with st.expander("Ownership Overview", expanded=True):
     left_col, right_col = st.columns(2)
