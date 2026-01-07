@@ -153,6 +153,7 @@ if 'initialized' not in st.session_state:
         'doubles_streak': 0,
         'rolled': False,
         'landed': None,
+        'last_landed': None,  # NEW: remembers landing during doubles roll-again
         'last_message': "",
         'trade_mode': False,
         'starting_square': "",
@@ -167,7 +168,7 @@ if 'initialized' not in st.session_state:
         'shortee_double6_shown': False,
         'group_levels': {group: 0 for group in GROUPS.keys()},
         'show_victory': False,
-        'buy_counter': 0,  # Ensures unique buy button keys
+        'buy_counter': 0,
     })
 
 ss = st.session_state
@@ -215,7 +216,7 @@ def check_co_landing_bonus(player, pos):
     return " | ".join(messages)
 
 # Twitch follow question
-if ss.get('pending_twitch_player') == cur and ss.rolled:
+if ss.get('pending_twitch_player') == cur and (ss.rolled or ss.last_landed is not None):
     st.info("You landed on the same space as lilshrtchit.ttv! Are you following on Twitch?")
     col_y, col_n = st.columns(2)
     if col_y.button("Yes!"):
@@ -242,7 +243,7 @@ if ss.in_jail.get(cur):
         ss.jail_free_card = None; ss.in_jail[cur] = False; st.rerun()
 
 # ======================
-# Roll dice — FIXED DOUBLES
+# Roll dice
 # ======================
 if not ss.rolled:
     st.info("Enter your real dice roll")
@@ -299,6 +300,7 @@ if not ss.rolled:
                 ss.last_message = "3 DOUBLES to JAIL!"
                 ss.rolled = True
                 ss.landed = None
+                ss.last_landed = None
                 ss.doubles_streak = 0
                 st.rerun()
         else:
@@ -318,6 +320,7 @@ if not ss.rolled:
 
         ss.position[cur] = new_pos
         ss.landed = new_pos
+        ss.last_landed = new_pos  # Remember for buy button
         ss.starting_square = BOARD[old_pos][0]
         ss.rolled = True
 
@@ -376,20 +379,22 @@ if not ss.rolled:
         if doubles and ss.doubles_streak < 3:
             ss.rolled = False
             ss.last_message += " | DOUBLES! Roll again!"
+
         st.rerun()
 
 # ======================
-# Buy property — WORKS ON EVERY LANDING INCLUDING MID-DOUBLES
+# Buy property — WORKS DURING DOUBLES ROLL-AGAIN
 # ======================
-if ss.rolled and ss.landed is not None and not ss.in_jail.get(cur):
-    sq = BOARD[ss.landed]
-    if sq[1] in ("prop", "rail", "util") and ss.properties.get(ss.landed) is None:
+if (ss.rolled or ss.last_landed is not None) and not ss.in_jail.get(cur):
+    current_landed = ss.landed if ss.rolled else ss.last_landed
+    sq = BOARD[current_landed]
+    if sq[1] in ("prop", "rail", "util") and ss.properties.get(current_landed) is None:
         ss.buy_counter += 1
-        buy_key = f"buy_{ss.landed}_{cur}_{ss.buy_counter}"
+        buy_key = f"buy_{current_landed}_{cur}_{ss.buy_counter}"
         if st.button(f"Buy {sq[0]} for {sq[2]}g?", key=buy_key):
             if ss.cash[cur] >= sq[2]:
                 ss.cash[cur] -= sq[2]
-                ss.properties[ss.landed] = cur
+                ss.properties[current_landed] = cur
                 ss.last_message = f"{cur} bought {sq[0]}!"
                 st.rerun()
 
@@ -408,6 +413,7 @@ if turn_over:
         if yes_col.button("Yes → Next", type="primary"):
             ss.rolled = False
             ss.landed = None
+            ss.last_landed = None
             ss.last_message = ""
             ss.confirm_next_for = None
             ss.doubles_streak = 0
@@ -456,7 +462,7 @@ if ss.trade_mode:
             st.rerun()
 
 # ======================
-# Ownership Overview — CLEAN & ALIGNED
+# Ownership Overview
 # ======================
 with st.expander("Ownership Overview", expanded=True):
     left_col, right_col = st.columns(2)
