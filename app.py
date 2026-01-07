@@ -6,7 +6,7 @@ import random
 # ======================
 st.set_page_config(page_title="Paliopoly – Chilled Dude Edition", layout="centered")
 st.title("Paliopoly – Chilled Dude Edition")
-st.markdown("**updated | NO affiliation with S6, just a fun player made app | Clean grouped ownership | Card moves fully land | Trading | Jail**")
+st.markdown("**updated | NO a blah with S6, just a fun player made app | Clean grouped ownership | Card moves fully land | Trading | Jail**")
 
 # ======================
 # SPLASH SCREEN
